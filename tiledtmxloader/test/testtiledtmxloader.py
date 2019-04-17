@@ -3,7 +3,10 @@
 
 import sys
 import os
-p = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
+
+THIS_DIR = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
+
+p = os.path.join(THIS_DIR, os.pardir, os.pardir)
 print("inserting to sys.path: ", p)
 sys.path.insert(0, p)
 # print sys.path
@@ -26,7 +29,7 @@ except:
 class MapLoadTestsPygame(unittest.TestCase):
 
     def setUp(self):
-        os.chdir(os.path.abspath(os.path.dirname(__file__)))
+        os.chdir(THIS_DIR)
         if not _has_pygame:
             self.fail("needs either module 'pygame' installed for testing")
         self.resourceloader = tiledtmxloader.helperspygame.ResourceLoaderPygame()
@@ -159,7 +162,7 @@ except:
 class MapLoadTestsPyglet(MapLoadTestsPygame):
 
     def setUp(self):
-        os.chdir(os.path.abspath(os.path.dirname(__file__)))
+        os.chdir(THIS_DIR)
         if not _has_pyglet:
             self.fail("needs either module 'pyglet' installed for testing")
         self.resourceloader = tiledtmxloader.helperspyglet.ResourceLoaderPyglet()

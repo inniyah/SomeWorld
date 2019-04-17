@@ -774,7 +774,13 @@ class TileMapParser(object):
         tile_gid = int(tile_set.firstgid) + int(tile_set_tile_node.attributes.get("id").nodeValue)
         tile = Tile(tile_gid)
         self._set_attributes(tile_set_tile_node, tile)
-        world_map.tiles[tile_gid].properties.update(tile.properties)
+        try:
+            world_map.tiles[tile_gid].properties.update(tile.properties)
+        except KeyError:
+            cell = Cell(tile_gid, tile_set)
+            cell.properties = dict(tile_set.properties)
+            world_map.tiles[tile_gid] = cell
+            world_map.tiles[tile_gid].properties.update(tile.properties)
         for node in self._get_nodes(tile_set_tile_node.childNodes, 'image'):
             self._build_tile_set_tile_image(node, tile)
         tile_set.tiles.append(tile)
@@ -807,7 +813,7 @@ class TileMapParser(object):
     def _build_world_map(self, world_node):
         world_map = TileMap()
         self._set_attributes(world_node, world_map)
-        if world_map.version != "1.0":
+        if world_map.version not in ["1.0", "1.1", "1.2"]:
             raise VersionError('this parser was made for maps of version 1.0, found version %s' % world_map.version)
         for node in self._get_nodes(world_node.childNodes, 'tileset'):
             self._build_tile_set(node, world_map)
