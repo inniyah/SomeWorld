@@ -1,0 +1,7 @@
+recursive-include examples *
+recursive-include test *
+recursive-include doc/html *
+prune doc/html/.doctrees
+recursive-exclude test *.pyc
+exclude doc/html/.buildinfo
+include LICENSE.txt

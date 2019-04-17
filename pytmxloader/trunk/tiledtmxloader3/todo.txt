@@ -1,0 +1,114 @@
+
+
+---- TODO ----------------------------------------------------------------------
+
+2011-08-03 - Gumm recollects ideas from past conversations.
+
+- Support tile attributes.
+- maybe introduce a global image cache
+- Integrate an efficient scrollbuffer of some kind (instead of collapse)?
+
+
+
+
+---- Done ----------------------------------------------------------------------
+
+2011-12-14
++ Flashy examples.
++ Maybe a tutorial for nubs. "How do I use Tiled to make a level?"
++ Redo layers (I see there are some notes above). Also, when layers are
+     transformed (merge, scale, etc.) the resulting layer needs to retain its Tiled attributes.
+
+2011-11-03
++ class ResourceLoaderPygame: implement new feature to support flipped tiles (newer versions of tiled support that)
+
+2011-08-04
++ 1. Convert x,y,w,h arguments to rects. (make the camera values use a rect!)
+
+        
+
+==== Notes =====================================================================
+
+
+    class Sprite: 
+        will stay the same (more or less)
+    class Layer: 
+        will be a public class
+
+    Layer.merge([layers]) -> Layer  
+        layers is a list of the layers that should be merged into one layer, not sure yet what this list contains
+    Layer.scale(Layer, factor) -> Layer 
+        should be pretty straight forward
+    Layer.collapse(Layer, level) -> Layer 
+        collapses the layer
+
+    class RendererPygame: 
+        will probably be removed and replaces with a camera class since 
+        there isn't more to it than cam set_camera_position() and render_layer()
+    
+On 29.05.2011 01:14, B W wrote:
+> Hi, DR0ID.
+>
+> I was thinking more about the performance of loading maps in the context of a supermap (many maps connected as one) for seamless transitions from one map to the next. I was wondering if you could modify your TMX loader to add a generator-like function that lets you tell it how "nice" to be.
+>
+> Like the UNIX "nice" command, it would load a map in smaller, nicer pieces. The user would call it with a "nice" value; let's call it N. When called, the loader would load an N-size chunk of the map and return; True is returned of there is more, False if it is finished loading--or some kind of meaningful value as a signal. One would call this repeatedly in a game loop until the map is finished loading.
+>
+> An example:
+>
+>    1. If N is the number of columns to load
+>    2. A map has 30 column
+>    3. My program runs 30 ticks per second
+>    4. I call map_loader.load_nice(1)
+>
+> Then I would have to call map_loader.load_nice(1) 30 times to load the map. The result is that the map would slowly load over the course of one second.
+>
+> This may not seem worth it for a small map of 30 columns, but The Mana World map is huge and takes a rather long time to load. Having a load_nice() could provide an option that does not require preloading an entire huge world, or freezing the game to load the next map.
+>
+> Interested in your thoughts.
+>
+> Gumm
+>
+> On Fri, May 27, 2011 at 11:58 AM, B W <stabbingfinger@gmail.com> wrote:
+>
+>     Oh yeah... Attached is the demo proggy. It uses your renderer, and is performing well. The renderer was surprisingly easy to incorporate.
+>
+>     Gumm
+>
+>
+
+Hello Gumm
+
+Yes, this would be a very useful feature. I just looked through the code. I think the most time goes into loading the images, but I also think the decoding the map might take some time. I see those steps currently implemented to load a map:
+
+   1. read and parse xml
+   2. convert (converts the strings into integers and other types)
+   3. decode and decompress the map data
+   4. load resources (load the images)
+
+There is probably optimization potential on each of those steps. Currently steps 1. and 2. are not separated (see TileMapParser.parse()).
+
+(Random) Thoughts about each step:
+
+    1. does probably not take long, has many for loops (but most maps do not have that many nodes), not sure if that could be split into smaller tasks
+
+    2. does probably not take long, this maybe could be done in step one, not sure why I made this a separate step
+
+    3. might take some time, probably could be split into (depends a bit on the formats and compressions, see TileLayer.decode()):
+
+       1. decode
+       2. decompress
+       3. re-interpret bytes as integers
+
+
+    4. this is what probably takes the longest time. This is actually done int the ResourceLoader. You a free to write your own ResourceLoader at any time that fits you needs best. I think the ResourceLoader could definitively use partial loading methods. Something like load_line(), load_column() or load_region()
+    Actually I'm not sure. Maybe the entire render engine would need to changed, I have something like this in mind:
+    When the camera is moved (or at next draw method call) the new visible tiles are determined. Those tiles should be looked up in the ResourceLoader and if there is no image/data cached then load it from harddisk (maybe I'm missing some details). This would have the effect that tiles could be blend in during runtime. There should also be an unload method or an automatic algorithm to unload allocated resources (otherwise it would behave like a memory leak and at the end all data is loaded but we don't want that). An important aspect of this is how to test that it behaves correctly (running it and looking at the taskmanager isn't the best way) and I'm not sure how it could be tested.
+
+It could be that I'm completely wrong about which method takes how long to complete (I have not profiled it).
+
+Profiling and breaking the map loading process into small (and fast) task should get the job done for what you want.
+
+Do you mind stalling this feature to the 3.1 (or 4.0 if api needs to change) version?
+
+
+
