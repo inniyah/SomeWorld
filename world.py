@@ -4,217 +4,19 @@
 import os
 import sys
 import json
+import math
 import argparse
-import freetype2
-import numpy
-import pyglet
-from pyglet import gl
-
-THIS_DIR = os.path.dirname(os.path.realpath(__file__))
-
+import pygame
 import tiledtmxloader
 
-# This class escapes a string, by replacing control characters by their hexadecimal equivalents
-class escape(str): # pylint: disable=invalid-name
-    def __repr__(self):
-        return ''.join('\\x{:02x}'.format(ord(ch)) if ord(ch) < 32 else ch for ch in self)
-    __str__ = __repr__
-
-class JSONDebugEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, set):
-            return sorted(obj)
-        if isinstance(obj, bytes):
-            return escape(obj.decode('utf-8'))
-        if isinstance(obj, object):
-            try:
-                return [
-                    ['%s' % (c,) for c in type.mro(type(obj))],
-                    obj.__dict__,
-                ]
-            except AttributeError:
-                return ['%s' % (c,) for c in type.mro(type(obj))]
-        try:
-            ret = json.JSONEncoder.default(self, obj)
-        except:
-            ret = ('%s' % (obj,))
-        return ret
-
-class TrueTypeMonoFont():
-  def __init__(self, font_name, size):
-    FT = freetype2.FT # easier access to constants
-    self.lib = freetype2.get_default_lib()
-
-    # Load font  and check it is monotype
-    face = self.lib.find_face(font_name)
-    face.set_char_size(size=size, resolution=90)
-    if face.face_flags & FT.FACE_FLAG_FIXED_WIDTH  == 0:
-        raise 'Font is not monotype'
-
-    # Determine largest glyph size
-    width, height, ascender, descender = 0, 0, 0, 0
-    for c in range(32,128):
-        face.load_char(c, FT.LOAD_RENDER | FT.LOAD_FORCE_AUTOHINT)
-        bitmap    = face.glyph.bitmap
-        width     = max( width, bitmap.width )
-        ascender  = max( ascender, face.glyph.bitmap_top )
-        descender = max( descender, bitmap.rows-face.glyph.bitmap_top )
-    height = ascender+descender
-
-    # Generate texture data
-    Z = numpy.zeros((height*6, width*16), dtype=numpy.ubyte)
-    for j in range(6):
-        for i in range(16):
-            face.load_char(32+j*16+i, FT.LOAD_RENDER | FT.LOAD_FORCE_AUTOHINT )
-            bitmap = face.glyph.bitmap.copy_with_array()
-            x = i*width  + face.glyph.bitmap_left
-            y = j*height + ascender - face.glyph.bitmap_top
-            Z[y:y+bitmap.rows,x:x+bitmap.width].flat = bitmap.buffer
-
-    # Bound texture
-    self.texture_ids = (pyglet.gl.GLuint * 1) ()
-    gl.glGenTextures(1, self.texture_ids)
-    self.texture_id = self.texture_ids[0]
-    gl.glBindTexture( gl.GL_TEXTURE_2D, self.texture_id )
-    gl.glTexParameterf( gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR )
-    gl.glTexParameterf( gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR )
-    gl.glTexImage2D( gl.GL_TEXTURE_2D, 0, gl.GL_ALPHA, Z.shape[1], Z.shape[0],
-                     0, gl.GL_ALPHA, gl.GL_UNSIGNED_BYTE, Z.tostring() )
-
-    # Generate display lists
-    dx, dy = width/float(Z.shape[1]), height/float(Z.shape[0])
-    self.base = gl.glGenLists(8*16)
-    for i in range(8*16):
-        c = chr(i)
-        x = i % 16
-        y = i // 16 - 2
-        gl.glNewList(self.base+i, gl.GL_COMPILE)
-        if (c == '\n'):
-            gl.glPopMatrix( )
-            gl.glTranslatef( 0, -height, 0 )
-            gl.glPushMatrix( )
-        elif (c == '\t'):
-            gl.glTranslatef( 4*width, 0, 0 )
-        elif (i >= 32):
-            gl.glBegin( gl.GL_QUADS )
-            gl.glTexCoord2d( (x  )*dx, (y+1)*dy ), gl.glVertex2d( 0,     -height )
-            gl.glTexCoord2d( (x  )*dx, (y  )*dy ), gl.glVertex2d( 0,     0 )
-            gl.glTexCoord2d( (x+1)*dx, (y  )*dy ), gl.glVertex2d( width, 0 )
-            gl.glTexCoord2d( (x+1)*dx, (y+1)*dy ), gl.glVertex2d( width, -height )
-            gl.glEnd( )
-            gl.glTranslatef( width, 0, 0 )
-        gl.glEndList( )
-
-  def write_text(self, text):
-    #gl.glTexEnvf( gl.GL_TEXTURE_ENV, gl.GL_TEXTURE_ENV_MODE, gl.GL_MODULATE )
-    #gl.glEnable( gl.GL_DEPTH_TEST )
-    gl.glEnable( gl.GL_BLEND )
-    #gl.glEnable( gl.GL_COLOR_MATERIAL )
-    #gl.glColorMaterial( gl.GL_FRONT_AND_BACK, gl.GL_AMBIENT_AND_DIFFUSE )
-    gl.glBlendFunc( gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA )
-    gl.glEnable( gl.GL_TEXTURE_2D )
-
-    gl.glBindTexture(gl.GL_TEXTURE_2D, self.texture_id)
-    gl.glColor4f(1, 1, 0, 1)
-    gl.glPushMatrix()
-    gl.glLoadIdentity( )
-    gl.glScalef(0.003, 0.003, 0)
-    #gl.glTranslatef(10, 100, 0)
-    gl.glPushMatrix()
-    gl.glListBase(self.base)
-    gl.glCallLists(len(text), gl.GL_UNSIGNED_BYTE, bytes(text, 'utf-8'))
-    #for c in text:
-    #    gl.glCallList(self.base + 1 + ord(c))
-    gl.glPopMatrix()
-    gl.glPopMatrix()
-
-    gl.glDisable( gl.GL_BLEND )
-    gl.glDisable( gl.GL_TEXTURE_2D )
-
-def demo_pyglet(file_name):
-    """Demonstrates loading, rendering, and traversing a Tiled map in pyglet.
-
-    TODO:
-    Maybe use this to put topleft as origin:
-        gl.glMatrixMode(GL_PROJECTION);
-        gl.glLoadIdentity();
-        gl.glOrtho(0.0, (double)mTarget->w, (double)mTarget->h, 0.0, -1.0, 1.0);
-
-    """
-
-    font = TrueTypeMonoFont("Liberation Mono", 64)
-
-    world_map = tiledtmxloader.tmxreader.TileMapParser().parse_decode(file_name)
-    #json.dump(world_map, sys.stdout, cls=JSONDebugEncoder, indent=2, sort_keys=True)
-
-    # delta is the x/y position of the map view.
-    # delta is a list so that it can be accessed from the on_draw method of
-    # window and the update function. Note that the position is in integers to
-    # match Pyglet Sprites. Using floating-point numbers causes graphical
-    # problems. See http://groups.google.com/group/pyglet-users/browse_thread/thread/52f9ae1ef7b0c8fa?pli=1
-    delta = [200, -world_map.pixel_height+150]
-    frames_per_sec = 1.0 / 30.0
-    window = pyglet.window.Window()
-
-    @window.event
-    def on_draw():
-        window.clear()
-        gl.glLoadIdentity() # Reset the "eye" back to the default location.
-        gl.glTranslatef(delta[0], delta[1], 0.0) # Move the "eye" to the current location on the map.
-        batch.draw()
-
-        #font.write_text("Test")
-
-    keys = pyglet.window.key.KeyStateHandler()
-    window.push_handlers(keys)
-    resources = tiledtmxloader.helperspyglet.ResourceLoaderPyglet()
-    resources.load(world_map)
-
-    def update(dt):
-        speed = (3 + keys[pyglet.window.key.LSHIFT] * 6) * \
-                int(dt / frames_per_sec)
-
-        if keys[pyglet.window.key.LEFT]:
-            delta[0] += speed
-        if keys[pyglet.window.key.RIGHT]:
-            delta[0] -= speed
-        if keys[pyglet.window.key.UP]:
-            delta[1] -= speed
-        if keys[pyglet.window.key.DOWN]:
-            delta[1] += speed
-
-    # Generate the graphics for every visible tile.
-    batch = pyglet.graphics.Batch()
-    sprites = []
-    for group_num, layer in enumerate(world_map.layers):
-        if not layer.visible:
-            continue
-        if layer.is_object_group:
-            # This is unimplemented in this minimal-case example code.
-            # Should you as a user of tmxreader need this layer,
-            # I hope to have a separate demo using objects as well.
-            continue
-        group = pyglet.graphics.OrderedGroup(group_num)
-        for ytile in range(layer.height):
-            for xtile in range(layer.width):
-                image_id = layer.content2D[xtile][ytile]
-                if image_id:
-                    image_file = resources.indexed_tiles[image_id][2]
-                    # The loader needed to load the images upside-down to match
-                    # the tiles to their correct images. This reversal must be
-                    # done again to render the rows in the correct order.
-                    sprites.append(pyglet.sprite.Sprite(image_file,
-                        world_map.tilewidth * xtile,
-                        world_map.tileheight * (layer.height - ytile),
-                        batch=batch, group=group))
-
-    pyglet.clock.schedule_interval(update, frames_per_sec)
-    pyglet.app.run()
-
+THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 
 #  -----------------------------------------------------------------------------
 
 def main():
+    """
+    Main method.
+    """
     parser = argparse.ArgumentParser(description='World Demo')
     parser.add_argument('-v', '--verbose', action="store_true", help="verbose output" )
     args = parser.parse_args()
@@ -225,17 +27,231 @@ def main():
         print("~ Not so verbose")
 
     path_to_map = os.path.join(os.path.dirname(__file__), 'data', 'maps', 'world.tmx')
-    #demo_pyglet("./tiledtmxloader/examples/001-1.tmx")
-    demo_pyglet(path_to_map)
+    demo_pygame(path_to_map)
+
+#  -----------------------------------------------------------------------------
+
+def demo_pygame(file_name):
+    """
+    Example showing how to use the paralax scrolling feature.
+    """
+
+    # parser the map (it is done here to initialize the
+    # window the same size as the map if it is small enough)
+    world_map = tiledtmxloader.tmxreader.TileMapParser().parse_decode(file_name)
+
+    # init pygame and set up a screen
+    pygame.init()
+    pygame.display.set_caption("tiledtmxloader - " + file_name + \
+                                                        " - keys: arrows, 0-9")
+    screen_width = min(1024, world_map.pixel_width)
+    screen_height = min(768, world_map.pixel_height)
+    screen = pygame.display.set_mode((screen_width, screen_height))
+
+    # load the images using pygame
+    resources = tiledtmxloader.helperspygame.ResourceLoaderPygame()
+    resources.load(world_map)
+
+    # prepare map rendering
+    assert world_map.orientation == "orthogonal"
+
+    # renderer
+    renderer = tiledtmxloader.helperspygame.RendererPygame()
+
+    # create hero sprite
+    # use floats for hero position
+    hero_pos_x = screen_width
+    hero_pos_y = screen_height
+    hero = create_hero(hero_pos_x, hero_pos_y)
+
+    # dimensions of the hero for collision detection
+    hero_width = hero.rect.width
+    hero_height = 5
+
+    # cam_offset is for scrolling
+    cam_world_pos_x = hero.rect.centerx
+    cam_world_pos_y = hero.rect.centery
+
+    # set initial cam position and size
+    renderer.set_camera_position_and_size(cam_world_pos_x, cam_world_pos_y, \
+                                        screen_width, screen_height)
+
+    # retrieve the layers
+    sprite_layers = tiledtmxloader.helperspygame.get_layers_from_map(resources)
+
+    # filter layers
+    sprite_layers = [layer for layer in sprite_layers if not layer.is_object_group]
+
+    # add the hero the the right layer, it can be changed using 0-9 keys
+    sprite_layers[1].add_sprite(hero)
+
+    # layer add/remove hero keys
+    num_keys = [pygame.K_0, pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, \
+                    pygame.K_5, pygame.K_6, pygame.K_7, pygame.K_8, pygame.K_9]
+
+    # variables for the main loop
+    clock = pygame.time.Clock()
+    running = True
+    speed = 0.075
+    # set up timer for fps printing
+    pygame.time.set_timer(pygame.USEREVENT, 1000)
+
+    # mainloop
+    while running:
+        dt = clock.tick()
+
+        # event handling
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.USEREVENT:
+                print("fps: ", clock.get_fps())
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    running = False
+                elif event.key in num_keys:
+                    # find out which layer to manipulate
+                    idx = num_keys.index(event.key)
+                    # make sure this layer exists
+                    if idx < len(world_map.layers):
+                        if sprite_layers[idx].contains_sprite(hero):
+                            sprite_layers[idx].remove_sprite(hero)
+                            print("removed hero sprite from layer", idx)
+                        else:
+                            sprite_layers[idx].add_sprite(hero)
+                            print("added hero sprite to layer", idx)
+                    else:
+                        print("no such layer or more than 10 layers: " + str(idx))
+
+        # find directions
+        direction_x = pygame.key.get_pressed()[pygame.K_RIGHT] - \
+                                        pygame.key.get_pressed()[pygame.K_LEFT]
+        direction_y = pygame.key.get_pressed()[pygame.K_DOWN] - \
+                                        pygame.key.get_pressed()[pygame.K_UP]
+
+        # make sure the hero moves with same speed in all directions (diagonal!)
+        dir_len = math.hypot(direction_x, direction_y)
+        dir_len = dir_len if dir_len else 1.0
+
+        # update position
+        step_x = speed * dt * direction_x / dir_len
+        step_y = speed * dt * direction_y / dir_len
+        step_x, step_y = check_collision(hero_pos_x, hero_pos_y, step_x, step_y, hero_width, hero_height, sprite_layers[3])
+        hero_pos_x += step_x
+        hero_pos_y += step_y
+        hero.rect.midbottom = (hero_pos_x, hero_pos_y)
+
+        # adjust camera according to the hero's position, follow him
+        # (don't make the hero follow the cam, maybe later you want different
+        #  objects to be followd by the cam)
+        renderer.set_camera_position(hero.rect.centerx, hero.rect.centery)
+
+        # clear screen, might be left out if every pixel is redrawn anyway
+        screen.fill((0, 0, 0))
+
+        # render the map
+        for sprite_layer in sprite_layers:
+            if sprite_layer.is_object_group:
+                # we dont draw the object group layers
+                # you should filter them out if not needed
+                continue
+            else:
+                renderer.render_layer(screen, sprite_layer)
+
+        pygame.display.flip()
+
+#  -----------------------------------------------------------------------------
+
+def create_hero(start_pos_x, start_pos_y):
+    """
+    Creates the hero sprite.
+    """
+    image = pygame.Surface((25, 45), pygame.SRCALPHA)
+    image.fill((255, 0, 0, 200))
+    rect = image.get_rect()
+    rect.midbottom = (start_pos_x, start_pos_y)
+    return tiledtmxloader.helperspygame.SpriteLayer.Sprite(image, rect)
+
+#  -----------------------------------------------------------------------------
+
+# unused in this demo, just here to show how you could check for collision!
+def is_walkable(pos_x, pos_y, coll_layer):
+    """
+    Just checks if a position in world coordinates is walkable.
+    """
+    tile_x = int(pos_x // coll_layer.tilewidth)
+    tile_y = int(pos_y // coll_layer.tileheight)
+
+    if coll_layer.content2D[tile_y][tile_x] is None:
+        return True
+    return False
+
+#  -----------------------------------------------------------------------------
+
+def check_collision(hero_pos_x, hero_pos_y, step_x, step_y, \
+                                    hero_width, hero_height, coll_layer):
+    """
+    Checks collision of the hero against the world. Its not the best way to
+    handle collision detection but for this demo it is good enough.
+
+    :Returns: steps to add to heros current position.
+    """
+    # create hero rect
+    hero_rect = pygame.Rect(0, 0, hero_width, hero_height)
+    hero_rect.midbottom = (hero_pos_x, hero_pos_y)
+
+    # find the tile location of the hero
+    tile_x = int((hero_pos_x) // coll_layer.tilewidth)
+    tile_y = int((hero_pos_y) // coll_layer.tileheight)
+
+    # find the tiles around the hero and extract their rects for collision
+    tile_rects = []
+    for diry in (-1, 0 , 1):
+        for dirx in (-1, 0, 1):
+            if coll_layer.content2D[tile_y + diry][tile_x + dirx] is not None:
+                tile_rects.append(coll_layer.content2D[tile_y + diry][tile_x + dirx].rect)
+
+    # save the original steps and return them if not canceled
+    res_step_x = step_x
+    res_step_y = step_y
+
+    # x direction, floor or ceil depending on the sign of the step
+    step_x = special_round(step_x)
+
+    # detect a collision and dont move in x direction if colliding
+    if hero_rect.move(step_x, 0).collidelist(tile_rects) > -1:
+        res_step_x = 0
+
+    # y direction, floor or ceil depending on the sign of the step
+    step_y = special_round(step_y)
+
+    # detect a collision and dont move in y direction if colliding
+    if hero_rect.move(0, step_y).collidelist(tile_rects) > -1:
+        res_step_y = 0
+
+    # return the step the hero should do
+    return res_step_x, res_step_y
+
+#  -----------------------------------------------------------------------------
+
+def special_round(value):
+    """
+    For negative numbers it returns the value floored,
+    for positive numbers it returns the value ceiled.
+    """
+    # same as:  math.copysign(math.ceil(abs(x)), x)
+    # OR:
+    # ## versus this, which could save many function calls
+    # import math
+    # ceil_or_floor = { True : math.ceil, False : math.floor, }
+    # # usage
+    # x = floor_or_ceil[val<0.0](val)
+
+    if value < 0:
+        return math.floor(value)
+    return math.ceil(value)
 
 #  -----------------------------------------------------------------------------
 
 if __name__ == '__main__':
-    # import cProfile
-    # cProfile.run('main()', "stats.profile")
-    # import pstats
-    # p = pstats.Stats("stats.profile")
-    # p.strip_dirs()
-    # p.sort_stats('time')
-    # p.print_stats()
     main()
