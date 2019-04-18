@@ -81,10 +81,6 @@ def demo_pygame(file_name):
     hero_pos_y = screen_height
     hero = create_hero(hero_pos_x, hero_pos_y, 'data/avatars/ch_01_00.png')
 
-    # dimensions of the hero for collision detection
-    hero_width = hero.rect.width
-    hero_height = 5
-
     # cam_offset is for scrolling
     cam_world_pos_x = hero.rect.centerx
     cam_world_pos_y = hero.rect.centery
@@ -152,10 +148,10 @@ def demo_pygame(file_name):
         # update position
         step_x = speed * dt * direction_x / dir_len
         step_y = speed * dt * direction_y / dir_len
-        step_x, step_y = check_collision(hero_pos_x, hero_pos_y, step_x, step_y, hero_width, hero_height, sprite_layers[3])
-        hero_pos_x += step_x
-        hero_pos_y += step_y
-        hero.rect.midbottom = (hero_pos_x, hero_pos_y)
+        hero_width = hero.rect.width
+        hero_height = 5
+        step_x, step_y = check_collision(hero.pos_x, hero.pos_y, step_x, step_y, hero_width, hero_height, sprite_layers[3])
+        hero.move(step_x, step_y)
 
         # adjust camera according to the hero's position, follow him
         # (don't make the hero follow the cam, maybe later you want different
@@ -192,8 +188,7 @@ def is_walkable(pos_x, pos_y, coll_layer):
 
 #  -----------------------------------------------------------------------------
 
-def check_collision(hero_pos_x, hero_pos_y, step_x, step_y, \
-                                    hero_width, hero_height, coll_layer):
+def check_collision(hero_pos_x, hero_pos_y, step_x, step_y, hero_width, hero_height, coll_layer):
     """
     Checks collision of the hero against the world. Its not the best way to
     handle collision detection but for this demo it is good enough.
