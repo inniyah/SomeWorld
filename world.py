@@ -9,7 +9,25 @@ import argparse
 import pygame
 import tiledtmxloader
 
+from avatar import Avatar, Hero
+
 THIS_DIR = os.path.dirname(os.path.realpath(__file__))
+
+def create_hero(start_pos_x, start_pos_y, path=None):
+    """
+    Creates the hero sprite.
+    """
+    if not path is None:
+        hero = Hero(start_pos_x, start_pos_y, path)
+        return hero
+
+    else:
+        image = pygame.Surface((25, 45), pygame.SRCALPHA)
+        image.fill((255, 0, 0, 200))
+        rect = image.get_rect()
+        rect.midbottom = (start_pos_x, start_pos_y)
+        return tiledtmxloader.helperspygame.SpriteLayer.Sprite(image, rect)
+
 
 #  -----------------------------------------------------------------------------
 
@@ -42,11 +60,10 @@ def demo_pygame(file_name):
 
     # init pygame and set up a screen
     pygame.init()
-    pygame.display.set_caption("tiledtmxloader - " + file_name + \
-                                                        " - keys: arrows, 0-9")
+    pygame.display.set_caption("tiledtmxloader - " + file_name + " - keys: arrows, 0-9")
     screen_width = min(1024, world_map.pixel_width)
     screen_height = min(768, world_map.pixel_height)
-    screen = pygame.display.set_mode((screen_width, screen_height))
+    screen = pygame.display.set_mode((screen_width, screen_height), pygame.DOUBLEBUF, 32)
 
     # load the images using pygame
     resources = tiledtmxloader.helperspygame.ResourceLoaderPygame()
@@ -62,7 +79,7 @@ def demo_pygame(file_name):
     # use floats for hero position
     hero_pos_x = screen_width
     hero_pos_y = screen_height
-    hero = create_hero(hero_pos_x, hero_pos_y)
+    hero = create_hero(hero_pos_x, hero_pos_y, 'data/avatars/ch_01_00.png')
 
     # dimensions of the hero for collision detection
     hero_width = hero.rect.width
@@ -73,8 +90,7 @@ def demo_pygame(file_name):
     cam_world_pos_y = hero.rect.centery
 
     # set initial cam position and size
-    renderer.set_camera_position_and_size(cam_world_pos_x, cam_world_pos_y, \
-                                        screen_width, screen_height)
+    renderer.set_camera_position_and_size(cam_world_pos_x, cam_world_pos_y, screen_width, screen_height)
 
     # retrieve the layers
     sprite_layers = tiledtmxloader.helperspygame.get_layers_from_map(resources)
@@ -162,18 +178,6 @@ def demo_pygame(file_name):
 
 #  -----------------------------------------------------------------------------
 
-def create_hero(start_pos_x, start_pos_y):
-    """
-    Creates the hero sprite.
-    """
-    image = pygame.Surface((25, 45), pygame.SRCALPHA)
-    image.fill((255, 0, 0, 200))
-    rect = image.get_rect()
-    rect.midbottom = (start_pos_x, start_pos_y)
-    return tiledtmxloader.helperspygame.SpriteLayer.Sprite(image, rect)
-
-#  -----------------------------------------------------------------------------
-
 # unused in this demo, just here to show how you could check for collision!
 def is_walkable(pos_x, pos_y, coll_layer):
     """
@@ -239,14 +243,6 @@ def special_round(value):
     For negative numbers it returns the value floored,
     for positive numbers it returns the value ceiled.
     """
-    # same as:  math.copysign(math.ceil(abs(x)), x)
-    # OR:
-    # ## versus this, which could save many function calls
-    # import math
-    # ceil_or_floor = { True : math.ceil, False : math.floor, }
-    # # usage
-    # x = floor_or_ceil[val<0.0](val)
-
     if value < 0:
         return math.floor(value)
     return math.ceil(value)
