@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.2" tiledversion="1.2.1" orientation="orthogonal" renderorder="right-down" width="48" height="50" tilewidth="32" tileheight="23" infinite="0" nextlayerid="12" nextobjectid="1">
+<map version="1.2" tiledversion="1.2.1" orientation="orthogonal" renderorder="right-down" width="48" height="50" tilewidth="32" tileheight="23" infinite="0" nextlayerid="14" nextobjectid="1">
  <tileset firstgid="1" name="tiles-32x46" tilewidth="32" tileheight="23" tilecount="540" columns="20">
   <image source="../tiles/tiles-32x46.png" width="640" height="621"/>
   <tile id="0">
@@ -204,7 +204,8 @@
   </tile>
   <tile id="40">
    <properties>
-    <property name="type" type="int" value="1"/>
+    <property name="block" type="int" value="0"/>
+    <property name="type" type="int" value="0"/>
    </properties>
   </tile>
   <tile id="41">
@@ -304,7 +305,8 @@
   </tile>
   <tile id="60">
    <properties>
-    <property name="type" type="int" value="2"/>
+    <property name="block" type="int" value="255"/>
+    <property name="type" type="int" value="0"/>
    </properties>
   </tile>
   <tile id="61">
@@ -2710,17 +2712,27 @@
  </layer>
  <layer id="9" name="Floor_01" width="48" height="50">
   <data encoding="base64" compression="gzip">
-   H4sIAAAAAAAAA+3OoQ0AQAgEwZO0/Z1jSchrzGwyfitJAQAAAACwvOH6xT8AAAA/uq0Bie9MbIAlAAA=
+   H4sIAAAAAAAAA+3UsQkAIAxFwZQu5XBubmsRwU4S7sP1jxQZETEAAAAoYSZ+NwF9ZT+ny//Rr//VOujXT/37V+8HAIAb+7sNCZjmZ4AlAAA=
   </data>
  </layer>
- <layer id="10" name="Floor_02" width="48" height="50">
+ <layer id="10" name="Walls_01" width="48" height="50">
   <data encoding="base64" compression="gzip">
-   H4sIAAAAAAAAA+3TMQqAMAyGUef2OHqG3v9IruJQhCrhl/cgQ7ZvSLYNAAAAgC/0y7Tbvhd2PTUm0wu73pDe36oDFh3VAYsS/ncm/X7S+9PvJ71/VAcAAAC/dAJOI2/PgCUAAA==
+   H4sIAAAAAAAAA+3WwQmAMBBE0Zy1B2MPWkOw/4pEUJAEUVhhGP0P5v4PG0hKAAAAAPAfw75ympNSbZTWALiTU/tuj2Vh11NX7dt6Ydcb3Ps7dUDQrA4ImtQBQe734/Z/q7nfj3v/og4AAAAA8EkrZOwWX4AlAAA=
   </data>
  </layer>
- <layer id="11" name="Floor_03" width="48" height="50" opacity="0.9">
+ <layer id="11" name="Floor_02" width="48" height="50" opacity="0.9">
   <data encoding="base64" compression="gzip">
-   H4sIAAAAAAAAA+3OoQ0AIAxFQTQwA+Ow/0hUIFAEQQLiLnlJ635KAAAAAH/KUYnqvNe/PNx1qm9qD3cBAAAAAPcMbxZekoAlAAA=
+   H4sIAAAAAAAAA+3UMQqAMAwF0M7aK/Vw3twWmkUcnAyB9+CTkOlPaQ0AAOC7Y+bcM/ZKrpdUon8u/f8Xf2Y8sm49sRcAAAAAQLgB1w68ZIAlAAA=
+  </data>
+ </layer>
+ <layer id="12" name="Walls_02" width="48" height="50">
+  <data encoding="base64" compression="gzip">
+   H4sIAAAAAAAAA+3OoQ0AMAwEsfAM0W26/0ilj0siRbZ0/KoAAACA7W7Uwy8/8v8MvwAAAAAApAdXpGAJgCUAAA==
+  </data>
+ </layer>
+ <layer id="13" name="Floor_03" width="48" height="50">
+  <data encoding="base64" compression="gzip">
+   H4sIAAAAAAAAA+3OoQ0AMAwEseA2+8+b36AwBbZ0/KoAAACAl5Nu6u0RAAAAAAC+MtoTBhOAJQAA
   </data>
  </layer>
 </map>

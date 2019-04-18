@@ -13,6 +13,39 @@ from avatar import Avatar, Hero
 
 THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 
+HPIXELS_PER_METER = 32
+VPIXELS_PER_METER = 23 # 45 degrees, so 32 * sqrt(2) / 2
+
+# This class escapes a string, by replacing control characters by their hexadecimal equivalents
+class escape(str): # pylint: disable=invalid-name
+    def __repr__(self):
+        return ''.join('\\x{:02x}'.format(ord(ch)) if ord(ch) < 32 else ch for ch in self)
+    __str__ = __repr__
+
+class JSONDebugEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, set):
+            return sorted(obj)
+        if isinstance(obj, bytes):
+            return escape(obj.decode('utf-8'))
+        if isinstance(obj, tiledtmxloader.tmxreader.Tile):
+            return 'Tile: id={} gid={} images={} properties={}'.format(obj.id, obj.gid, obj.images, obj.properties)
+        if isinstance(obj, object):
+            try:
+                return [
+                    ['%s' % (c,) for c in type.mro(type(obj))],
+                    obj.__dict__,
+                ]
+            except AttributeError:
+                return ['%s' % (c,) for c in type.mro(type(obj))]
+        try:
+            ret = json.JSONEncoder.default(self, obj)
+        except:
+            ret = ('%s' % (obj,))
+        return ret
+
+#  -----------------------------------------------------------------------------
+
 def create_hero(start_pos_x, start_pos_y, path=None):
     """
     Creates the hero sprite.
@@ -57,6 +90,9 @@ def demo_pygame(file_name):
     # parser the map (it is done here to initialize the
     # window the same size as the map if it is small enough)
     world_map = tiledtmxloader.tmxreader.TileMapParser().parse_decode(file_name)
+
+    #with open('debug_map.json', 'w') as f:
+    #    json.dump(world_map, f, cls=JSONDebugEncoder, indent=2, sort_keys=True)
 
     # init pygame and set up a screen
     pygame.init()
@@ -104,7 +140,6 @@ def demo_pygame(file_name):
     # variables for the main loop
     clock = pygame.time.Clock()
     running = True
-    speed = 0.075
     # set up timer for fps printing
     pygame.time.set_timer(pygame.USEREVENT, 1000)
 
@@ -136,22 +171,22 @@ def demo_pygame(file_name):
                         print("no such layer or more than 10 layers: " + str(idx))
 
         # find directions
-        direction_x = pygame.key.get_pressed()[pygame.K_RIGHT] - \
-                                        pygame.key.get_pressed()[pygame.K_LEFT]
-        direction_y = pygame.key.get_pressed()[pygame.K_DOWN] - \
-                                        pygame.key.get_pressed()[pygame.K_UP]
+        direction_x = pygame.key.get_pressed()[pygame.K_RIGHT] - pygame.key.get_pressed()[pygame.K_LEFT]
+        direction_y = pygame.key.get_pressed()[pygame.K_DOWN] - pygame.key.get_pressed()[pygame.K_UP]
 
         # make sure the hero moves with same speed in all directions (diagonal!)
         dir_len = math.hypot(direction_x, direction_y)
         dir_len = dir_len if dir_len else 1.0
 
         # update position
-        step_x = speed * dt * direction_x / dir_len
-        step_y = speed * dt * direction_y / dir_len
+        speed_x = 0.075 * 2.
+        step_x = speed_x * dt * direction_x / dir_len
+        speed_y = 0.053 * 2.
+        step_y = speed_y * dt * direction_y / dir_len
         hero_width = hero.rect.width
         hero_height = 5
-        step_x, step_y = check_collision(hero.pos_x, hero.pos_y, step_x, step_y, hero_width, hero_height, sprite_layers[3])
-        hero.move(step_x, step_y)
+        step_x, step_y = check_collision(hero.pos_x, hero.pos_y, step_x, step_y, hero_width, hero_height, world_map, sprite_layers[hero.layer])
+        hero.move(dt, step_x, step_y)
 
         # adjust camera according to the hero's position, follow him
         # (don't make the hero follow the cam, maybe later you want different
@@ -188,7 +223,33 @@ def is_walkable(pos_x, pos_y, coll_layer):
 
 #  -----------------------------------------------------------------------------
 
-def check_collision(hero_pos_x, hero_pos_y, step_x, step_y, hero_width, hero_height, coll_layer):
+def special_round(value):
+    """
+    For negative numbers it returns the value floored,
+    for positive numbers it returns the value ceiled.
+    """
+    if value < 0:
+        return math.floor(value)
+    return math.ceil(value)
+
+#  -----------------------------------------------------------------------------
+
+def is_walkable(pos_x, pos_y, world_map, coll_layer):
+    """
+    Just checks if a position in world coordinates is walkable.
+    """
+    tile_x = int(pos_x // coll_layer.tilewidth)
+    tile_y = int(pos_y // coll_layer.tileheight)
+    this_sprite = coll_layer.content2D[tile_y][tile_x]
+    if this_sprite is not None:
+        this_tile = world_map.tiles[this_sprite.key[0]]
+        if this_tile.properties.get('block', None):
+            return False
+    return True
+
+#  -----------------------------------------------------------------------------
+
+def check_collision(hero_pos_x, hero_pos_y, step_x, step_y, hero_width, hero_height, world_map, coll_layer):
     """
     Checks collision of the hero against the world. Its not the best way to
     handle collision detection but for this demo it is good enough.
@@ -207,8 +268,12 @@ def check_collision(hero_pos_x, hero_pos_y, step_x, step_y, hero_width, hero_hei
     tile_rects = []
     for diry in (-1, 0 , 1):
         for dirx in (-1, 0, 1):
-            if coll_layer.content2D[tile_y + diry][tile_x + dirx] is not None:
-                tile_rects.append(coll_layer.content2D[tile_y + diry][tile_x + dirx].rect)
+            this_sprite = coll_layer.content2D[tile_y + diry][tile_x + dirx]
+            if this_sprite is not None:
+                this_tiles = [world_map.tiles[k] for k in this_sprite.key]
+                if this_tiles[0].properties.get('block', None):
+                    #json.dump(this_tile.properties, sys.stdout, cls=JSONDebugEncoder, indent=2, sort_keys=True)
+                    tile_rects.append(this_sprite.rect)
 
     # save the original steps and return them if not canceled
     res_step_x = step_x
@@ -230,17 +295,6 @@ def check_collision(hero_pos_x, hero_pos_y, step_x, step_y, hero_width, hero_hei
 
     # return the step the hero should do
     return res_step_x, res_step_y
-
-#  -----------------------------------------------------------------------------
-
-def special_round(value):
-    """
-    For negative numbers it returns the value floored,
-    for positive numbers it returns the value ceiled.
-    """
-    if value < 0:
-        return math.floor(value)
-    return math.ceil(value)
 
 #  -----------------------------------------------------------------------------
 

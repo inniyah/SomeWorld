@@ -8,16 +8,19 @@ import math
 import glob
 import re
 import pygame
+import vectors
 
-DIR_SOUTH = 1<<4
-DIR_WEST  = 2<<4
-DIR_NORTH = 3<<4
-DIR_EAST  = 4<<4
+DIRID_SOUTH = 1<<4
+DIRID_WEST  = 2<<4
+DIRID_NORTH = 3<<4
+DIRID_EAST  = 4<<4
 
-MOVE_STAND = 0
-MOVE_RLEG  = 1
-MOVE_CLEG  = 2
-MOVE_LLEG  = 3
+MOVEID_STAND = 0
+MOVEID_RLEG  = 1
+MOVEID_CLEG  = 2
+MOVEID_LLEG  = 3
+
+NUM_MOVES = 4
 
 # See: https://nerdparadise.com/programming/pygameblitopacity
 def blit_alpha(target, source, location, opacity):
@@ -36,55 +39,57 @@ class Avatar(tiledtmxloader.helperspygame.SpriteLayer.Sprite):
 
         self.pos_x = start_pos_x
         self.pos_y = start_pos_y
+        self.layer = 1
 
         self.images = {}
         w = 32
         h = 48
-        for dir, y in [
-            (DIR_SOUTH, 0 * h),
-            (DIR_WEST,  1 * h),
-            (DIR_EAST,  2 * h),
-            (DIR_NORTH, 3 * h),
+        for dir_id, y in [
+            (DIRID_SOUTH, 0 * h),
+            (DIRID_WEST,  1 * h),
+            (DIRID_EAST,  2 * h),
+            (DIRID_NORTH, 3 * h),
         ]:
             for move, x in [
-                (MOVE_RLEG,  0 * w),
-                (MOVE_STAND, 1 * w),
-                (MOVE_LLEG,  2 * w),
+                (MOVEID_RLEG,  0 * w),
+                (MOVEID_STAND, 1 * w),
+                (MOVEID_LLEG,  2 * w),
             ]:
                 rect = pygame.Rect((x, y, w, h))
                 image = pygame.Surface(rect.size, pygame.SRCALPHA, 32).convert_alpha()
                 image.blit(spritesheet, (0, 0), rect)
-                self.images[move | dir] = image
-            self.images[MOVE_CLEG | dir] = self.images[MOVE_STAND | dir]
+                self.images[move | dir_id] = image
+            self.images[MOVEID_CLEG | dir_id] = self.images[MOVEID_STAND | dir_id]
 
-        try:
-            self.dir = DIR_NORTH
-            image = self.images[MOVE_STAND | self.dir]
-            rect = image.get_rect()
-            rect.midbottom = (start_pos_x, start_pos_y)
-        except:
-            image = None
-            rect = None
+        self.dir_id = DIRID_NORTH
+        self.move_id = MOVEID_STAND
+        self.distance = 0
+        image = self.images[self.move_id | self.dir_id]
+        rect = image.get_rect()
+        rect.midbottom = (start_pos_x, start_pos_y)
 
         super().__init__(image, rect)
 
-    def move(self, step_x, step_y):
+    def move(self, delta_time, step_x, step_y):
+        self.distance += math.sqrt(step_x**2 + step_y**2)
+        self.move_id = int(self.distance / 10.) % NUM_MOVES
         if step_x == 0 and step_y == 0:
-            dir = self.dir
+            dir_id = self.dir_id
+            self.move_id = MOVEID_STAND
         elif abs(step_x) == abs(step_y):
-            if step_x > 0 and (self.dir == DIR_EAST or self.dir == DIR_WEST):   dir = DIR_EAST
-            elif step_x < 0 and (self.dir == DIR_EAST or self.dir == DIR_WEST): dir = DIR_WEST
-            elif step_y < 0: dir = DIR_NORTH
-            else: dir = DIR_SOUTH 
+            if step_x > 0 and (self.dir_id == DIRID_EAST or self.dir_id == DIRID_WEST):   dir_id = DIRID_EAST
+            elif step_x < 0 and (self.dir_id == DIRID_EAST or self.dir_id == DIRID_WEST): dir_id = DIRID_WEST
+            elif step_y < 0: dir_id = DIRID_NORTH
+            else: dir_id = DIRID_SOUTH 
         elif abs(step_x) > abs(step_y):
-            if step_x >= 0: dir = DIR_EAST
-            else:           dir = DIR_WEST
+            if step_x >= 0: dir_id = DIRID_EAST
+            else:           dir_id = DIRID_WEST
         else:
-            if step_y >= 0: dir = DIR_SOUTH
-            else:           dir = DIR_NORTH
+            if step_y >= 0: dir_id = DIRID_SOUTH
+            else:           dir_id = DIRID_NORTH
 
         midbottom = self.rect.midbottom
-        image = self.images[MOVE_STAND | dir]
+        image = self.images[self.move_id | dir_id]
         rect = image.get_rect()
         rect.midbottom = midbottom
         self.image = image
@@ -94,7 +99,7 @@ class Avatar(tiledtmxloader.helperspygame.SpriteLayer.Sprite):
         self.pos_y += step_y
         self.rect.midbottom = (self.pos_x, self.pos_y)
 
-        self.dir = dir
+        self.dir_id = dir_id
 
 class Hero(Avatar):
     def __init__(self, start_pos_x, start_pos_y, path):
