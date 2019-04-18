@@ -15,9 +15,6 @@ from common import *
 
 THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 
-HPIXELS_PER_METER = 32
-VPIXELS_PER_METER = 23 # 45 degrees, so 32 * sqrt(2) / 2
-
 #  -----------------------------------------------------------------------------
 
 def create_hero(start_pos_x, start_pos_y, path=None):
@@ -63,9 +60,6 @@ def demo_pygame(file_name):
 
     world = World(tiledtmxloader.tmxreader.TileMapParser().parse_decode(file_name))
 
-    #with open('debug_map.json', 'w') as f:
-    #    json.dump(world.map, f, cls=JSONDebugEncoder, indent=2, sort_keys=True)
-
     # init pygame and set up a screen
     pygame.init()
     pygame.display.set_caption("tiledtmxloader - " + file_name + " - keys: arrows, 0-9")
@@ -87,7 +81,7 @@ def demo_pygame(file_name):
     world.renderer.set_camera_position_and_size(cam_world_pos_x, cam_world_pos_y, screen_width, screen_height)
 
     # add the hero the the right layer, it can be changed using 0-9 keys
-    world.sprite_layers[2].add_sprite(hero)
+    world.avatar_layers[hero.layer][1].add_sprite(hero)
 
     # layer add/remove hero keys
     num_keys = [pygame.K_0, pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5, pygame.K_6, pygame.K_7, pygame.K_8, pygame.K_9]
@@ -116,11 +110,11 @@ def demo_pygame(file_name):
                     idx = num_keys.index(event.key)
                     # make sure this layer exists
                     if idx < len(world.map.layers):
-                        if world.sprite_layers[idx].contains_sprite(hero):
-                            world.sprite_layers[idx].remove_sprite(hero)
+                        if world.all_sprite_layers[idx].contains_sprite(hero):
+                            world.all_sprite_layers[idx].remove_sprite(hero)
                             print("removed hero sprite from layer", idx)
                         else:
-                            world.sprite_layers[idx].add_sprite(hero)
+                            world.all_sprite_layers[idx].add_sprite(hero)
                             print("added hero sprite to layer", idx)
                     else:
                         print("no such layer or more than 10 layers: " + str(idx))
@@ -140,7 +134,7 @@ def demo_pygame(file_name):
         step_y = speed_y * dt * direction_y / dir_len
         hero_width = hero.rect.width
         hero_height = 5
-        step_x, step_y = world.check_collision(hero.pos_x, hero.pos_y, step_x, step_y, hero_width, hero_height, world.sprite_layers[hero.layer])
+        step_x, step_y = world.check_collision(hero.pos_x, hero.pos_y, step_x, step_y, hero_width, hero_height, world.metadata_layers[hero.layer][1])
         hero.move(dt, step_x, step_y)
 
         # adjust camera according to the hero's position, follow him
@@ -152,7 +146,7 @@ def demo_pygame(file_name):
         screen.fill((0, 0, 0))
 
         # render the map
-        for sprite_layer in world.sprite_layers:
+        for sprite_layer in world.all_sprite_layers:
             if sprite_layer.is_object_group:
                 # we dont draw the object group layers
                 # you should filter them out if not needed

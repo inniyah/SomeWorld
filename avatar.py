@@ -9,6 +9,7 @@ import glob
 import re
 import pygame
 import vectors
+from common import *
 
 DIRID_SOUTH = 1<<4
 DIRID_WEST  = 2<<4

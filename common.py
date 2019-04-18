@@ -4,6 +4,7 @@
 import os
 import sys
 import json
+import tiledtmxloader
 
 # This class escapes a string, by replacing control characters by their hexadecimal equivalents
 class escape(str): # pylint: disable=invalid-name

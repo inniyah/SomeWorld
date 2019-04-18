@@ -9,6 +9,10 @@ import glob
 import re
 import pygame
 import vectors
+from common import *
+
+HPIXELS_PER_METER = 32
+VPIXELS_PER_METER = 23 # 45 degrees, so 32 * sqrt(2) / 2
 
 def special_round(value):
     """
@@ -30,14 +34,29 @@ class World():
         # prepare map rendering
         assert self.map.orientation == "orthogonal"
 
+        #with open('debug_map.json', 'w') as f:
+        #    json.dump(self.map, f, cls=JSONDebugEncoder, indent=2, sort_keys=True)
+
         # renderer
         self.renderer = tiledtmxloader.helperspygame.RendererPygame()
 
-        # retrieve the layers
-        self.sprite_layers = tiledtmxloader.helperspygame.get_layers_from_map(self.resources)
+        self.avatar_layers = {}
+        self.metadata_layers = {}
 
-        # filter layers
-        self.sprite_layers = [layer for layer in self.sprite_layers if not layer.is_object_group]
+        self.all_sprite_layers = []
+        for idx, layer in enumerate(self.resources.world_map.layers):
+            if not layer.is_object_group:
+                print("Layer '{}' ({}): {}".format(layer.name, 'visible' if layer.visible else 'not visible', layer.properties))
+                sprite_layer = tiledtmxloader.helperspygame.get_layer_at_index(idx, self.resources)
+                self.all_sprite_layers.append(sprite_layer)
+
+                if layer.properties.get('Metadata', None):
+                    self.metadata_layers[int(layer.properties.get('Level', 0))] = (layer, sprite_layer)
+                if layer.properties.get('Avatar', None):
+                    self.avatar_layers[int(layer.properties.get('Level', 0))] = (layer, sprite_layer)
+
+        print("Avatar Layers: {}".format(self.avatar_layers))
+        print("Metadata Layers: {}".format(self.metadata_layers))
 
     def is_walkable(self, pos_x, pos_y, coll_layer):
         """
@@ -73,8 +92,8 @@ class World():
             for dirx in (-1, 0, 1):
                 this_sprite = coll_layer.content2D[tile_y + diry][tile_x + dirx]
                 if this_sprite is not None:
-                    this_tiles = [self.map.tiles[k] for k in this_sprite.key]
-                    if this_tiles[0].properties.get('block', None):
+                    this_tiles = [self.map.tiles.get(k, None) for k in this_sprite.key if k in self.map.tiles]
+                    if this_tiles and this_tiles[0].properties.get('Block', None) in ['true']:
                         #json.dump(this_tile.properties, sys.stdout, cls=JSONDebugEncoder, indent=2, sort_keys=True)
                         tile_rects.append(this_sprite.rect)
 
