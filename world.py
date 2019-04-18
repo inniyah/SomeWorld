@@ -99,7 +99,7 @@ def demo_pygame(file_name):
     sprite_layers = [layer for layer in sprite_layers if not layer.is_object_group]
 
     # add the hero the the right layer, it can be changed using 0-9 keys
-    sprite_layers[1].add_sprite(hero)
+    sprite_layers[2].add_sprite(hero)
 
     # layer add/remove hero keys
     num_keys = [pygame.K_0, pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, \
