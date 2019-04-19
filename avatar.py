@@ -114,6 +114,11 @@ class Avatar(tiledtmxloader.helperspygame.SpriteLayer.Sprite):
     def get_map_pos(self):
         return (self.pos_x, self.pos_y - self.COLLISION_HEIGHT/2.0)
 
+    def get_map_pos_info(self, world, metadata_layer):
+        pos_x, pos_y = self.get_map_pos()
+        tile_x, tile_y, sprite, tiles = world.get_pos_info(pos_x, pos_y, metadata_layer)
+        return pos_x, pos_y, tile_x, tile_y, sprite, tiles
+
 class Hero(Avatar):
     def __init__(self, start_pos_x, start_pos_y, spritesheet_png):
         super().__init__(start_pos_x, start_pos_y, spritesheet_png)

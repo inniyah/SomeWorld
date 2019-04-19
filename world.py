@@ -74,6 +74,15 @@ class World():
         print("Avatar Layers: {}".format(self.avatar_layers))
         print("Metadata Layers: {}".format(self.metadata_layers))
 
+    def get_pos_info(self, pos_x, pos_y, coll_layer):
+        tile_x = int(pos_x // coll_layer.tilewidth)
+        tile_y = int(pos_y // coll_layer.tileheight)
+        this_sprite = coll_layer.content2D[tile_y][tile_x]
+        this_tiles = None
+        if this_sprite is not None:
+            this_tiles = [self.map.tiles.get(k, None) for k in this_sprite.key if k in self.map.tiles]
+        return tile_x, tile_y, this_sprite, this_tiles
+
     def is_walkable(self, pos_x, pos_y, coll_layer):
         """
         Just checks if a position in world coordinates is walkable.
@@ -152,13 +161,19 @@ class World():
         color_black = (0,0,0)
 
         for avatar in self.avatars:
-            l = self.avatar_layers[avatar.layer][1]
+            avatar_layer = self.avatar_layers[avatar.layer][1]
 
-            mx, my = avatar.get_map_pos()
-            mx = (mx // l.tilewidth) * l.tilewidth
-            my = (my // l.tileheight) * l.tileheight
-            mx, my = self.renderer.world_to_screen(l, mx, my)
-            pygame.draw.rect(screen, color_blue, [mx, my,  l.tilewidth, l.tileheight], 2)
+            #metadata_layer = self.metadata_layers[avatar.layer][1]
+            #pos_x, pos_y, tile_x, tile_y, sprite, tiles = avatar.get_map_pos_info(self, metadata_layer)
+            #if tiles and tiles[0]:
+            #    json.dump(tiles[0].properties, sys.stdout, cls=JSONDebugEncoder, indent=2, sort_keys=True)
 
-            px, py = self.renderer.world_to_screen(l, avatar.rect.x, avatar.rect.y)
+            pos_x, pos_y = avatar.get_map_pos()
+
+            mx = (pos_x // avatar_layer.tilewidth) * avatar_layer.tilewidth
+            my = (pos_y // avatar_layer.tileheight) * avatar_layer.tileheight
+            mx, my = self.renderer.world_to_screen(avatar_layer, mx, my)
+            pygame.draw.rect(screen, color_blue, [mx, my,  avatar_layer.tilewidth, avatar_layer.tileheight], 2)
+
+            px, py = self.renderer.world_to_screen(avatar_layer, avatar.rect.x, avatar.rect.y)
             pygame.draw.rect(screen, color_red, [px, py, avatar.rect.width, avatar.rect.height], 2)
