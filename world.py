@@ -22,9 +22,14 @@ def special_round(value):
     return math.ceil(value)
 
 class World():
+    HPIXELS_PER_METER = 32.0
+    VPIXELS_PER_METER = 23.0 # 45 degrees, so 32 * sqrt(2) / 2
+    METERS_PER_LAYER = 2.0
+
     def __init__(self, map):
         self.map = map
         self.avatars = set()
+        self.avatars_dict = {}
 
         # load the images using pygame
         self.resources = tiledtmxloader.helperspygame.ResourceLoaderPygame()
@@ -131,6 +136,8 @@ class World():
 
     def add_avatar(self, avatar):
         self.avatars.add(avatar)
+        if avatar.id:
+            self.avatars_dict[avatar.id] = avatar
 
     # pygame.draw.lines(screen, color, closed, pointlist, thickness)
     # pygame.draw.rect(screen, color, (x,y,width,height), thickness)
@@ -145,5 +152,13 @@ class World():
         color_black = (0,0,0)
 
         for avatar in self.avatars:
-            px, py = self.renderer.world_to_screen(self.avatar_layers[avatar.layer][1], avatar.rect.x, avatar.rect.y)
+            l = self.avatar_layers[avatar.layer][1]
+
+            mx, my = avatar.get_map_pos()
+            mx = (mx // l.tilewidth) * l.tilewidth
+            my = (my // l.tileheight) * l.tileheight
+            mx, my = self.renderer.world_to_screen(l, mx, my)
+            pygame.draw.rect(screen, color_blue, [mx, my,  l.tilewidth, l.tileheight], 2)
+
+            px, py = self.renderer.world_to_screen(l, avatar.rect.x, avatar.rect.y)
             pygame.draw.rect(screen, color_red, [px, py, avatar.rect.width, avatar.rect.height], 2)

@@ -35,24 +35,19 @@ def blit_alpha(target, source, location, opacity):
 
 # See: https://www.pygame.org/wiki/Spritesheet
 class Avatar(tiledtmxloader.helperspygame.SpriteLayer.Sprite):
-    def __init__(self, start_pos_x, start_pos_y, spritesheet_filename):
+    COLLISION_HEIGHT = 5.0
+
+    def __init__(self, start_pos_x, start_pos_y, spritesheet_filename, id=None):
         spritesheet = pygame.image.load(spritesheet_filename).convert()
 
         self.pos_x = start_pos_x
         self.pos_y = start_pos_y
         self.layer = 1
-
-        self.coord_x_m = 1.0
-        self.coord_y_m = 1.0
-        self.coord_z_m = 0.0
-
-        self.pos_x = HPIXELS_PER_METER * self.coord_x_m
-        self.pos_y = VPIXELS_PER_METER * self.coord_y_m
-        self.layer = 1 + int(math.floor(self.coord_z_m / METERS_PER_LAYER))
+        self.id = id
 
         self.images = {}
-        w = 32
-        h = 48
+        w = spritesheet.get_width() / 3
+        h = spritesheet.get_height() / 4
         for dir_id, y in [
             (DIRID_SOUTH, 0 * h),
             (DIRID_WEST,  1 * h),
@@ -112,12 +107,12 @@ class Avatar(tiledtmxloader.helperspygame.SpriteLayer.Sprite):
 
     def try_to_move(self, world, delta_time, step_x, step_y):
         collision_width = self.rect.width
-        collision_height = 5
+        collision_height = self.COLLISION_HEIGHT
         new_step_x, new_step_y = world.check_collision(self.pos_x, self.pos_y, step_x, step_y, collision_width, collision_height, world.metadata_layers[self.layer][1])
         self.execute_move(delta_time, new_step_x, new_step_y)
 
     def get_map_pos(self):
-        return (self.pos_x, self.pos_y)
+        return (self.pos_x, self.pos_y - self.COLLISION_HEIGHT/2.0)
 
 class Hero(Avatar):
     def __init__(self, start_pos_x, start_pos_y, spritesheet_png):
@@ -135,6 +130,6 @@ def create_avatar(world, layer_id, start_pos_x, start_pos_y, obj_id, obj_props):
         json.dump(json_data, sys.stdout, cls=JSONDebugEncoder, indent=2, sort_keys=True)
     spritesheet_png = json_data['SpriteSheet']
     full_spritesheet_path = os.path.join(os.path.dirname(__file__), 'data', 'avatars', spritesheet_png)
-    avatar = Avatar(start_pos_x, start_pos_y, full_spritesheet_path)
+    avatar = Avatar(start_pos_x, start_pos_y, full_spritesheet_path, obj_id)
     world.add_avatar(avatar)
     world.avatar_layers[layer_id][1].add_sprite(avatar)
