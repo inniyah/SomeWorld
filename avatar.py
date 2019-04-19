@@ -74,7 +74,7 @@ class Avatar(tiledtmxloader.helperspygame.SpriteLayer.Sprite):
 
         super().__init__(image, rect)
 
-    def execute_move(self, delta_time, step_x, step_y):
+    def execute_move(self, world, delta_time, step_x, step_y):
         self.distance += math.sqrt(step_x**2 + step_y**2)
         self.move_id = int(self.distance / 10.) % NUM_MOVES
         if step_x == 0 and step_y == 0:
@@ -105,11 +105,21 @@ class Avatar(tiledtmxloader.helperspygame.SpriteLayer.Sprite):
 
         self.dir_id = dir_id
 
+        metadata_layer = world.metadata_layers[self.layer][1]
+        pos_x, pos_y, tile_x, tile_y, tile_avg_height, tile_x_slope, tile_y_slope, sprite, tiles = self.get_map_pos_height_info(world, metadata_layer)
+        if not tile_avg_height is None:
+            h_avg = metadata_layer.tileheight * tile_avg_height
+            h_dx = metadata_layer.tileheight * tile_x_slope
+            h_dy = metadata_layer.tileheight * tile_y_slope
+            self.z = h_avg
+        else:
+            self.z = 0
+
     def try_to_move(self, world, delta_time, step_x, step_y):
         collision_width = self.rect.width
         collision_height = self.COLLISION_HEIGHT
         new_step_x, new_step_y = world.check_collision(self.pos_x, self.pos_y, step_x, step_y, collision_width, collision_height, world.metadata_layers[self.layer][1])
-        self.execute_move(delta_time, new_step_x, new_step_y)
+        self.execute_move(world, delta_time, new_step_x, new_step_y)
 
     def get_map_pos(self):
         return (self.pos_x, self.pos_y - self.COLLISION_HEIGHT/2.0)

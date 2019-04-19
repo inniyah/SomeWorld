@@ -169,15 +169,15 @@ class World():
             #pos_x, pos_y, tile_x, tile_y, sprite, tiles = avatar.get_map_pos_info(self, metadata_layer)
             pos_x, pos_y, tile_x, tile_y, tile_avg_height, tile_x_slope, tile_y_slope, sprite, tiles = avatar.get_map_pos_height_info(self, metadata_layer)
 
-            mx = (pos_x // avatar_layer.tilewidth) * avatar_layer.tilewidth
-            my = (pos_y // avatar_layer.tileheight) * avatar_layer.tileheight
+            mx = (pos_x // avatar_layer.tilewidth) * metadata_layer.tilewidth
+            my = (pos_y // avatar_layer.tileheight) * metadata_layer.tileheight
             mx, my = self.renderer.world_to_screen(avatar_layer, mx, my)
-            pygame.draw.rect(screen, color_blue, [mx, my,  avatar_layer.tilewidth, avatar_layer.tileheight], 2)
+            pygame.draw.rect(screen, color_blue, [mx, my,  metadata_layer.tilewidth, metadata_layer.tileheight], 2)
 
             if not tile_avg_height is None:
-                h_avg = avatar_layer.tileheight * tile_avg_height
-                h_dx = (avatar_layer.tileheight * tile_x_slope) / 2.0
-                h_dy = (avatar_layer.tileheight * tile_y_slope) / 2.0
+                h_avg = metadata_layer.tileheight * tile_avg_height
+                h_dx = (metadata_layer.tileheight * tile_x_slope) / 2.0
+                h_dy = (metadata_layer.tileheight * tile_y_slope) / 2.0
                 pygame.draw.lines(screen, color_blue, True, [
                     (mx,                          my                            - (h_avg - h_dx - h_dy)),
                     (mx + avatar_layer.tilewidth, my                            - (h_avg + h_dx - h_dy)),
