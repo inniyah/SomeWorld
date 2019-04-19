@@ -9,29 +9,11 @@ import argparse
 import pygame
 import tiledtmxloader
 
-from avatar import Avatar, Hero
+from avatar import Avatar, Hero, create_hero_avatar
 from world import World
 from common import *
 
 THIS_DIR = os.path.dirname(os.path.realpath(__file__))
-
-#  -----------------------------------------------------------------------------
-
-def create_hero(start_pos_x_px, start_pos_y_px, path=None):
-    """
-    Creates the hero sprite.
-    """
-    if not path is None:
-        hero = Hero(start_pos_x_px, start_pos_y_px, path)
-        return hero
-
-    else:
-        image = pygame.Surface((25, 45), pygame.SRCALPHA)
-        image.fill((255, 0, 0, 200))
-        rect = image.get_rect()
-        rect.midbottom = (start_pos_x_px, start_pos_y_px)
-        return tiledtmxloader.helperspygame.SpriteLayer.Sprite(image, rect)
-
 
 #  -----------------------------------------------------------------------------
 
@@ -58,20 +40,21 @@ def demo_pygame(file_name):
     Example showing how to use the paralax scrolling feature.
     """
 
-    world = World(tiledtmxloader.tmxreader.TileMapParser().parse_decode(file_name))
-
     # init pygame and set up a screen
     pygame.init()
     pygame.display.set_caption("tiledtmxloader - " + file_name + " - keys: arrows, 0-9")
-    screen_width_px = min(1024, world.map.pixel_width)
-    screen_height_px = min(768, world.map.pixel_height)
+    screen_width_px = 1024
+    screen_height_px = 768
     screen = pygame.display.set_mode((screen_width_px, screen_height_px), pygame.DOUBLEBUF, 32)
+
+    world = World(tiledtmxloader.tmxreader.TileMapParser().parse_decode(file_name))
 
     # create hero sprite
     # use floats for hero position
     hero_pos_x_px = screen_width_px
     hero_pos_y_px = screen_height_px
-    hero = create_hero(hero_pos_x_px, hero_pos_y_px, 'data/avatars/ch_01_00.png')
+    hero = create_hero_avatar(hero_pos_x_px, hero_pos_y_px, 'ch_01_00.png')
+    world.add_avatar(hero)
 
     # cam_offset is for scrolling
     cam_world_pos_x_px = hero.rect.centerx
@@ -132,10 +115,7 @@ def demo_pygame(file_name):
         step_x_px = speed_x * dt * direction_x / dir_len
         speed_y = 0.053 * 2.
         step_y_px = speed_y * dt * direction_y / dir_len
-        hero_width_px = hero.rect.width
-        hero_height_px = 5
-        step_x_px, step_y_px = world.check_collision(hero.pos_x_px, hero.pos_y_px, step_x_px, step_y_px, hero_width_px, hero_height_px, world.metadata_layers[hero.layer][1])
-        hero.move(dt, step_x_px, step_y_px)
+        hero.try_to_move(world, dt, step_x_px, step_y_px)
 
         # adjust camera according to the hero's position, follow him
         # (don't make the hero follow the cam, maybe later you want different
@@ -154,21 +134,8 @@ def demo_pygame(file_name):
             else:
                 world.renderer.render_layer(screen, sprite_layer)
 
-        color_red = (255,0,0)
-        color_green = (0,255,0)
-        color_blue = (0,0,255)
-        color_dark_blue = (0,0,128)
-        color_white = (255,255,255)
-        color_black = (0,0,0)
-        color_pink = (255,200,200)
 
-        # pygame.draw.lines(screen, color, closed, pointlist, thickness)
-        # pygame.draw.rect(screen, color, (x,y,width,height), thickness)
-        # pygame.draw.circle(screen, color, (x,y), radius, thickness)
-        # pygame.draw.arc(screen, color, (x,y,width,height), start_angle, stop_angle, thickness)
-
-        px, py = world.renderer.world_to_screen(world.avatar_layers[hero.layer][1], hero.rect.x, hero.rect.y)
-        pygame.draw.rect(screen, color_red, [px, py, hero.rect.width, hero.rect.height], 2)
+        world.draw_avatar_boxes(screen)
 
         pygame.display.flip()
 

@@ -35,19 +35,19 @@ def blit_alpha(target, source, location, opacity):
 
 # See: https://www.pygame.org/wiki/Spritesheet
 class Avatar(tiledtmxloader.helperspygame.SpriteLayer.Sprite):
-    def __init__(self, start_pos_x_px, start_pos_y_px, filename):
-        spritesheet = pygame.image.load(filename).convert()
+    def __init__(self, start_pos_x, start_pos_y, spritesheet_filename):
+        spritesheet = pygame.image.load(spritesheet_filename).convert()
 
-        self.pos_x_px = start_pos_x_px
-        self.pos_y_px = start_pos_y_px
+        self.pos_x = start_pos_x
+        self.pos_y = start_pos_y
         self.layer = 1
 
         self.coord_x_m = 1.0
         self.coord_y_m = 1.0
         self.coord_z_m = 0.0
 
-        self.pos_x_px = HPIXELS_PER_METER * self.coord_x_m
-        self.pos_y_px = VPIXELS_PER_METER * self.coord_y_m
+        self.pos_x = HPIXELS_PER_METER * self.coord_x_m
+        self.pos_y = VPIXELS_PER_METER * self.coord_y_m
         self.layer = 1 + int(math.floor(self.coord_z_m / METERS_PER_LAYER))
 
         self.images = {}
@@ -70,16 +70,16 @@ class Avatar(tiledtmxloader.helperspygame.SpriteLayer.Sprite):
                 self.images[move | dir_id] = image
             self.images[MOVEID_CLEG | dir_id] = self.images[MOVEID_STAND | dir_id]
 
-        self.dir_id = DIRID_NORTH
+        self.dir_id = DIRID_SOUTH
         self.move_id = MOVEID_STAND
         self.distance = 0
         image = self.images[self.move_id | self.dir_id]
         rect = image.get_rect()
-        rect.midbottom = (start_pos_x_px, start_pos_y_px)
+        rect.midbottom = (start_pos_x, start_pos_y)
 
         super().__init__(image, rect)
 
-    def move(self, delta_time, step_x, step_y):
+    def execute_move(self, delta_time, step_x, step_y):
         self.distance += math.sqrt(step_x**2 + step_y**2)
         self.move_id = int(self.distance / 10.) % NUM_MOVES
         if step_x == 0 and step_y == 0:
@@ -104,12 +104,37 @@ class Avatar(tiledtmxloader.helperspygame.SpriteLayer.Sprite):
         self.image = image
         self.rect = rect
 
-        self.pos_x_px += step_x
-        self.pos_y_px += step_y
-        self.rect.midbottom = (self.pos_x_px, self.pos_y_px)
+        self.pos_x += step_x
+        self.pos_y += step_y
+        self.rect.midbottom = (self.pos_x, self.pos_y)
 
         self.dir_id = dir_id
 
+    def try_to_move(self, world, delta_time, step_x, step_y):
+        collision_width = self.rect.width
+        collision_height = 5
+        new_step_x, new_step_y = world.check_collision(self.pos_x, self.pos_y, step_x, step_y, collision_width, collision_height, world.metadata_layers[self.layer][1])
+        self.execute_move(delta_time, new_step_x, new_step_y)
+
+    def get_map_pos(self):
+        return (self.pos_x, self.pos_y)
+
 class Hero(Avatar):
-    def __init__(self, start_pos_x_px, start_pos_y_px, path):
-        super().__init__(start_pos_x_px, start_pos_y_px, path)
+    def __init__(self, start_pos_x, start_pos_y, spritesheet_png):
+        super().__init__(start_pos_x, start_pos_y, spritesheet_png)
+
+def create_hero_avatar(start_pos_x, start_pos_y, spritesheet_png):
+    full_spritesheet_path = os.path.join(os.path.dirname(__file__), 'data', 'avatars', spritesheet_png)
+    avatar = Hero(start_pos_x, start_pos_y, full_spritesheet_path)
+    return avatar
+
+def create_avatar(world, layer_id, start_pos_x, start_pos_y, obj_id, obj_props):
+    json_filename = os.path.join(os.path.dirname(__file__), 'data', 'characters', '{}.json'.format(obj_id))
+    with open(json_filename) as json_file:
+        json_data = json.load(json_file)
+        json.dump(json_data, sys.stdout, cls=JSONDebugEncoder, indent=2, sort_keys=True)
+    spritesheet_png = json_data['SpriteSheet']
+    full_spritesheet_path = os.path.join(os.path.dirname(__file__), 'data', 'avatars', spritesheet_png)
+    avatar = Avatar(start_pos_x, start_pos_y, full_spritesheet_path)
+    world.add_avatar(avatar)
+    world.avatar_layers[layer_id][1].add_sprite(avatar)

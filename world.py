@@ -10,6 +10,7 @@ import re
 import pygame
 import vectors
 from common import *
+from avatar import create_avatar
 
 def special_round(value):
     """
@@ -23,6 +24,7 @@ def special_round(value):
 class World():
     def __init__(self, map):
         self.map = map
+        self.avatars = set()
 
         # load the images using pygame
         self.resources = tiledtmxloader.helperspygame.ResourceLoaderPygame()
@@ -42,8 +44,20 @@ class World():
 
         self.all_sprite_layers = []
         for idx, layer in enumerate(self.resources.world_map.layers):
-            if not layer.is_object_group:
-                print("Layer '{}' ({}): {}".format(layer.name, 'visible' if layer.visible else 'not visible', layer.properties))
+            if layer.is_object_group:
+                print("Objects Layer '{}' ({}): {}".format(layer.name, 'visible' if layer.visible else 'not visible', layer.properties))
+                #json.dump(layer, sys.stdout, cls=JSONDebugEncoder, indent=2, sort_keys=True)
+                for obj in layer.objects:
+                    obj_id = obj.properties.get('Id', None)
+                    obj_type = obj.properties.get('Type', None)
+                    layer_level = int(layer.properties.get('Level', 0))
+                    if obj_type == 'avatar':
+                        print("Avatar '{}' ('{}') at x={}, y={}".format(obj_id, obj_type, obj.x, obj.y))
+                        create_avatar(self, layer_level, obj.x, obj.y, obj_id, obj.properties)
+                    else:
+                        print("Object '{}' ('{}') at x={}, y={}".format(obj_id, obj_type, obj.x, obj.y))
+            else:
+                print("Tiled Layer '{}' ({}): {}".format(layer.name, 'visible' if layer.visible else 'not visible', layer.properties))
                 sprite_layer = tiledtmxloader.helperspygame.get_layer_at_index(idx, self.resources)
                 self.all_sprite_layers.append(sprite_layer)
 
@@ -114,3 +128,22 @@ class World():
 
         # return the step the hero should do
         return res_step_x, res_step_y
+
+    def add_avatar(self, avatar):
+        self.avatars.add(avatar)
+
+    # pygame.draw.lines(screen, color, closed, pointlist, thickness)
+    # pygame.draw.rect(screen, color, (x,y,width,height), thickness)
+    # pygame.draw.circle(screen, color, (x,y), radius, thickness)
+    # pygame.draw.arc(screen, color, (x,y,width,height), start_angle, stop_angle, thickness)
+
+    def draw_avatar_boxes(self, screen):
+        color_red = (255,0,0)
+        color_green = (0,255,0)
+        color_blue = (0,0,255)
+        color_white = (255,255,255)
+        color_black = (0,0,0)
+
+        for avatar in self.avatars:
+            px, py = self.renderer.world_to_screen(self.avatar_layers[avatar.layer][1], avatar.rect.x, avatar.rect.y)
+            pygame.draw.rect(screen, color_red, [px, py, avatar.rect.width, avatar.rect.height], 2)
