@@ -17,19 +17,19 @@ THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 
 #  -----------------------------------------------------------------------------
 
-def create_hero(start_pos_x, start_pos_y, path=None):
+def create_hero(start_pos_x_px, start_pos_y_px, path=None):
     """
     Creates the hero sprite.
     """
     if not path is None:
-        hero = Hero(start_pos_x, start_pos_y, path)
+        hero = Hero(start_pos_x_px, start_pos_y_px, path)
         return hero
 
     else:
         image = pygame.Surface((25, 45), pygame.SRCALPHA)
         image.fill((255, 0, 0, 200))
         rect = image.get_rect()
-        rect.midbottom = (start_pos_x, start_pos_y)
+        rect.midbottom = (start_pos_x_px, start_pos_y_px)
         return tiledtmxloader.helperspygame.SpriteLayer.Sprite(image, rect)
 
 
@@ -63,22 +63,22 @@ def demo_pygame(file_name):
     # init pygame and set up a screen
     pygame.init()
     pygame.display.set_caption("tiledtmxloader - " + file_name + " - keys: arrows, 0-9")
-    screen_width = min(1024, world.map.pixel_width)
-    screen_height = min(768, world.map.pixel_height)
-    screen = pygame.display.set_mode((screen_width, screen_height), pygame.DOUBLEBUF, 32)
+    screen_width_px = min(1024, world.map.pixel_width)
+    screen_height_px = min(768, world.map.pixel_height)
+    screen = pygame.display.set_mode((screen_width_px, screen_height_px), pygame.DOUBLEBUF, 32)
 
     # create hero sprite
     # use floats for hero position
-    hero_pos_x = screen_width
-    hero_pos_y = screen_height
-    hero = create_hero(hero_pos_x, hero_pos_y, 'data/avatars/ch_01_00.png')
+    hero_pos_x_px = screen_width_px
+    hero_pos_y_px = screen_height_px
+    hero = create_hero(hero_pos_x_px, hero_pos_y_px, 'data/avatars/ch_01_00.png')
 
     # cam_offset is for scrolling
-    cam_world_pos_x = hero.rect.centerx
-    cam_world_pos_y = hero.rect.centery
+    cam_world_pos_x_px = hero.rect.centerx
+    cam_world_pos_y_px = hero.rect.centery
 
     # set initial cam position and size
-    world.renderer.set_camera_position_and_size(cam_world_pos_x, cam_world_pos_y, screen_width, screen_height)
+    world.renderer.set_camera_position_and_size(cam_world_pos_x_px, cam_world_pos_y_px, screen_width_px, screen_height_px)
 
     # add the hero the the right layer, it can be changed using 0-9 keys
     world.avatar_layers[hero.layer][1].add_sprite(hero)
@@ -129,13 +129,13 @@ def demo_pygame(file_name):
 
         # update position
         speed_x = 0.075 * 2.
-        step_x = speed_x * dt * direction_x / dir_len
+        step_x_px = speed_x * dt * direction_x / dir_len
         speed_y = 0.053 * 2.
-        step_y = speed_y * dt * direction_y / dir_len
-        hero_width = hero.rect.width
-        hero_height = 5
-        step_x, step_y = world.check_collision(hero.pos_x, hero.pos_y, step_x, step_y, hero_width, hero_height, world.metadata_layers[hero.layer][1])
-        hero.move(dt, step_x, step_y)
+        step_y_px = speed_y * dt * direction_y / dir_len
+        hero_width_px = hero.rect.width
+        hero_height_px = 5
+        step_x_px, step_y_px = world.check_collision(hero.pos_x_px, hero.pos_y_px, step_x_px, step_y_px, hero_width_px, hero_height_px, world.metadata_layers[hero.layer][1])
+        hero.move(dt, step_x_px, step_y_px)
 
         # adjust camera according to the hero's position, follow him
         # (don't make the hero follow the cam, maybe later you want different

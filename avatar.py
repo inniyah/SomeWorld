@@ -35,12 +35,16 @@ def blit_alpha(target, source, location, opacity):
 
 # See: https://www.pygame.org/wiki/Spritesheet
 class Avatar(tiledtmxloader.helperspygame.SpriteLayer.Sprite):
-    def __init__(self, start_pos_x, start_pos_y, filename):
+    def __init__(self, start_pos_x_px, start_pos_y_px, filename):
         spritesheet = pygame.image.load(filename).convert()
 
-        self.pos_x = start_pos_x
-        self.pos_y = start_pos_y
+        self.pos_x_px = start_pos_x_px
+        self.pos_y_px = start_pos_y_px
         self.layer = 1
+
+        self.pos_x_m = 0
+        self.pos_y_m = 0
+        self.pos_z_m = 0
 
         self.images = {}
         w = 32
@@ -67,7 +71,7 @@ class Avatar(tiledtmxloader.helperspygame.SpriteLayer.Sprite):
         self.distance = 0
         image = self.images[self.move_id | self.dir_id]
         rect = image.get_rect()
-        rect.midbottom = (start_pos_x, start_pos_y)
+        rect.midbottom = (start_pos_x_px, start_pos_y_px)
 
         super().__init__(image, rect)
 
@@ -96,12 +100,12 @@ class Avatar(tiledtmxloader.helperspygame.SpriteLayer.Sprite):
         self.image = image
         self.rect = rect
 
-        self.pos_x += step_x
-        self.pos_y += step_y
-        self.rect.midbottom = (self.pos_x, self.pos_y)
+        self.pos_x_px += step_x
+        self.pos_y_px += step_y
+        self.rect.midbottom = (self.pos_x_px, self.pos_y_px)
 
         self.dir_id = dir_id
 
 class Hero(Avatar):
-    def __init__(self, start_pos_x, start_pos_y, path):
-        super().__init__(start_pos_x, start_pos_y, path)
+    def __init__(self, start_pos_x_px, start_pos_y_px, path):
+        super().__init__(start_pos_x_px, start_pos_y_px, path)
