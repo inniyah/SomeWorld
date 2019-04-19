@@ -162,18 +162,36 @@ class World():
 
         for avatar in self.avatars:
             avatar_layer = self.avatar_layers[avatar.layer][1]
+            #pos_x, pos_y = avatar.get_map_pos()
 
-            #metadata_layer = self.metadata_layers[avatar.layer][1]
-            #pos_x, pos_y, tile_x, tile_y, sprite, tiles = avatar.get_map_pos_info(self, metadata_layer)
-            #if tiles and tiles[0]:
-            #    json.dump(tiles[0].properties, sys.stdout, cls=JSONDebugEncoder, indent=2, sort_keys=True)
-
-            pos_x, pos_y = avatar.get_map_pos()
+            metadata_layer = self.metadata_layers[avatar.layer][1]
+            pos_x, pos_y, tile_x, tile_y, sprite, tiles = avatar.get_map_pos_info(self, metadata_layer)
+            if tiles and tiles[0]:
+                #json.dump(tiles[0].properties, sys.stdout, cls=JSONDebugEncoder, indent=2, sort_keys=True)
+                tile_avg_height = tiles[0].properties.get('Height', None)
+                tile_x_slope = float(tiles[0].properties.get('XSlope', 0.0))
+                tile_y_slope = float(tiles[0].properties.get('YSlope', 0.0))
+                if not tile_avg_height is None:
+                    tile_avg_height = float(tile_avg_height)
+                    #print("Tile: x={}, y={}, h={}, dx={}, dy={}".format(tile_x, tile_y, tile_avg_height, tile_x_slope, tile_y_slope))
+            else:
+                tile_avg_height = None
 
             mx = (pos_x // avatar_layer.tilewidth) * avatar_layer.tilewidth
             my = (pos_y // avatar_layer.tileheight) * avatar_layer.tileheight
             mx, my = self.renderer.world_to_screen(avatar_layer, mx, my)
             pygame.draw.rect(screen, color_blue, [mx, my,  avatar_layer.tilewidth, avatar_layer.tileheight], 2)
+
+            if not tile_avg_height is None:
+                h_avg = avatar_layer.tileheight * tile_avg_height
+                h_dx = (avatar_layer.tileheight * tile_x_slope) / 2.0
+                h_dy = (avatar_layer.tileheight * tile_y_slope) / 2.0
+                pygame.draw.lines(screen, color_blue, True, [
+                    (mx,                          my                            - (h_avg - h_dx - h_dy)),
+                    (mx + avatar_layer.tilewidth, my                            - (h_avg + h_dx - h_dy)),
+                    (mx + avatar_layer.tilewidth, my + avatar_layer.tileheight  - (h_avg + h_dx + h_dy)),
+                    (mx,                          my + avatar_layer.tileheight  - (h_avg - h_dx + h_dy))
+                ], 2)
 
             px, py = self.renderer.world_to_screen(avatar_layer, avatar.rect.x, avatar.rect.y)
             pygame.draw.rect(screen, color_red, [px, py, avatar.rect.width, avatar.rect.height], 2)
