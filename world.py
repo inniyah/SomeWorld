@@ -162,20 +162,12 @@ class World():
 
         for avatar in self.avatars:
             avatar_layer = self.avatar_layers[avatar.layer][1]
+
             #pos_x, pos_y = avatar.get_map_pos()
 
             metadata_layer = self.metadata_layers[avatar.layer][1]
-            pos_x, pos_y, tile_x, tile_y, sprite, tiles = avatar.get_map_pos_info(self, metadata_layer)
-            if tiles and tiles[0]:
-                #json.dump(tiles[0].properties, sys.stdout, cls=JSONDebugEncoder, indent=2, sort_keys=True)
-                tile_avg_height = tiles[0].properties.get('Height', None)
-                tile_x_slope = float(tiles[0].properties.get('XSlope', 0.0))
-                tile_y_slope = float(tiles[0].properties.get('YSlope', 0.0))
-                if not tile_avg_height is None:
-                    tile_avg_height = float(tile_avg_height)
-                    #print("Tile: x={}, y={}, h={}, dx={}, dy={}".format(tile_x, tile_y, tile_avg_height, tile_x_slope, tile_y_slope))
-            else:
-                tile_avg_height = None
+            #pos_x, pos_y, tile_x, tile_y, sprite, tiles = avatar.get_map_pos_info(self, metadata_layer)
+            pos_x, pos_y, tile_x, tile_y, tile_avg_height, tile_x_slope, tile_y_slope, sprite, tiles = avatar.get_map_pos_height_info(self, metadata_layer)
 
             mx = (pos_x // avatar_layer.tilewidth) * avatar_layer.tilewidth
             my = (pos_y // avatar_layer.tileheight) * avatar_layer.tileheight

@@ -119,6 +119,21 @@ class Avatar(tiledtmxloader.helperspygame.SpriteLayer.Sprite):
         tile_x, tile_y, sprite, tiles = world.get_pos_info(pos_x, pos_y, metadata_layer)
         return pos_x, pos_y, tile_x, tile_y, sprite, tiles
 
+    def get_map_pos_height_info(self, world, metadata_layer):
+        pos_x, pos_y, tile_x, tile_y, sprite, tiles = self.get_map_pos_info(world, metadata_layer)
+        if tiles and tiles[0]:
+            tile_avg_height = tiles[0].properties.get('Height', None)
+            tile_x_slope = float(tiles[0].properties.get('XSlope', 0.0))
+            tile_y_slope = float(tiles[0].properties.get('YSlope', 0.0))
+            if not tile_avg_height is None:
+                #print("Tile: x={}, y={}, h={}, dx={}, dy={}".format(tile_x, tile_y, tile_avg_height, tile_x_slope, tile_y_slope))
+                tile_avg_height = float(tile_avg_height)
+        else:
+            tile_avg_height = None
+            tile_x_slope = 0.0
+            tile_y_slope = 0.0
+        return pos_x, pos_y, tile_x, tile_y, tile_avg_height, tile_x_slope, tile_y_slope, sprite, tiles
+
 class Hero(Avatar):
     def __init__(self, start_pos_x, start_pos_y, spritesheet_png):
         super().__init__(start_pos_x, start_pos_y, spritesheet_png)
