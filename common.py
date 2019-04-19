@@ -6,6 +6,10 @@ import sys
 import json
 import tiledtmxloader
 
+HPIXELS_PER_METER = 32.0
+VPIXELS_PER_METER = 23.0 # 45 degrees, so 32 * sqrt(2) / 2
+METERS_PER_LAYER = 2.0
+
 # This class escapes a string, by replacing control characters by their hexadecimal equivalents
 class escape(str): # pylint: disable=invalid-name
     def __repr__(self):

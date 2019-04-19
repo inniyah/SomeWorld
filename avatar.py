@@ -42,9 +42,13 @@ class Avatar(tiledtmxloader.helperspygame.SpriteLayer.Sprite):
         self.pos_y_px = start_pos_y_px
         self.layer = 1
 
-        self.pos_x_m = 0
-        self.pos_y_m = 0
-        self.pos_z_m = 0
+        self.coord_x_m = 1.0
+        self.coord_y_m = 1.0
+        self.coord_z_m = 0.0
+
+        self.pos_x_px = HPIXELS_PER_METER * self.coord_x_m
+        self.pos_y_px = VPIXELS_PER_METER * self.coord_y_m
+        self.layer = 1 + int(math.floor(self.coord_z_m / METERS_PER_LAYER))
 
         self.images = {}
         w = 32

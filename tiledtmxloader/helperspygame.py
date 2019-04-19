@@ -1133,6 +1133,12 @@ class RendererPygame(object):
         return (screen_x + self._render_cam_rect.x * layer.paralax_factor_x, \
                 screen_y + self._render_cam_rect.y * layer.paralax_factor_y)
 
+    def world_to_screen(self, layer, world_x, world_y):
+        """
+        Returns the screen location for given world coordinates and layer.
+        """
+        return (world_x - self._render_cam_rect.x * layer.paralax_factor_x, \
+                world_y - self._render_cam_rect.y * layer.paralax_factor_y)
 
 #  -----------------------------------------------------------------------------
 

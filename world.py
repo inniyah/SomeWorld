@@ -11,9 +11,6 @@ import pygame
 import vectors
 from common import *
 
-HPIXELS_PER_METER = 32
-VPIXELS_PER_METER = 23 # 45 degrees, so 32 * sqrt(2) / 2
-
 def special_round(value):
     """
     For negative numbers it returns the value floored,

@@ -154,6 +154,22 @@ def demo_pygame(file_name):
             else:
                 world.renderer.render_layer(screen, sprite_layer)
 
+        color_red = (255,0,0)
+        color_green = (0,255,0)
+        color_blue = (0,0,255)
+        color_dark_blue = (0,0,128)
+        color_white = (255,255,255)
+        color_black = (0,0,0)
+        color_pink = (255,200,200)
+
+        # pygame.draw.lines(screen, color, closed, pointlist, thickness)
+        # pygame.draw.rect(screen, color, (x,y,width,height), thickness)
+        # pygame.draw.circle(screen, color, (x,y), radius, thickness)
+        # pygame.draw.arc(screen, color, (x,y,width,height), start_angle, stop_angle, thickness)
+
+        px, py = world.renderer.world_to_screen(world.avatar_layers[hero.layer][1], hero.rect.x, hero.rect.y)
+        pygame.draw.rect(screen, color_red, [px, py, hero.rect.width, hero.rect.height], 2)
+
         pygame.display.flip()
 
 #  -----------------------------------------------------------------------------
