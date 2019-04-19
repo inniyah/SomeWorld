@@ -74,29 +74,29 @@ class World():
         print("Avatar Layers: {}".format(self.avatar_layers))
         print("Metadata Layers: {}".format(self.metadata_layers))
 
-    def get_pos_info(self, pos_x, pos_y, coll_layer):
-        tile_x = int(pos_x // coll_layer.tilewidth)
-        tile_y = int(pos_y // coll_layer.tileheight)
-        this_sprite = coll_layer.content2D[tile_y][tile_x]
+    def get_pos_info(self, pos_x, pos_y, metadata_layer):
+        tile_x = int(pos_x // metadata_layer.tilewidth)
+        tile_y = int(pos_y // metadata_layer.tileheight)
+        this_sprite = metadata_layer.content2D[tile_y][tile_x]
         this_tiles = None
         if this_sprite is not None:
             this_tiles = [self.map.tiles.get(k, None) for k in this_sprite.key if k in self.map.tiles]
         return tile_x, tile_y, this_sprite, this_tiles
 
-    def is_walkable(self, pos_x, pos_y, coll_layer):
+    def is_walkable(self, pos_x, pos_y, metadata_layer):
         """
         Just checks if a position in world coordinates is walkable.
         """
-        tile_x = int(pos_x // coll_layer.tilewidth)
-        tile_y = int(pos_y // coll_layer.tileheight)
-        this_sprite = coll_layer.content2D[tile_y][tile_x]
+        tile_x = int(pos_x // metadata_layer.tilewidth)
+        tile_y = int(pos_y // metadata_layer.tileheight)
+        this_sprite = metadata_layer.content2D[tile_y][tile_x]
         if this_sprite is not None:
             this_tile = self.map.tiles[this_sprite.key[0]]
             if this_tile.properties.get('block', None):
                 return False
         return True
 
-    def check_collision(self, hero_pos_x, hero_pos_y, step_x, step_y, hero_width, hero_height, coll_layer):
+    def check_collision(self, hero_pos_x, hero_pos_y, step_x, step_y, hero_width, hero_height, metadata_layer):
         """
         Checks collision of the hero against the world. Its not the best way to
         handle collision detection but for this demo it is good enough.
@@ -108,14 +108,14 @@ class World():
         hero_rect.midbottom = (hero_pos_x, hero_pos_y)
 
         # find the tile location of the hero
-        tile_x = int((hero_pos_x) // coll_layer.tilewidth)
-        tile_y = int((hero_pos_y) // coll_layer.tileheight)
+        tile_x = int((hero_pos_x) // metadata_layer.tilewidth)
+        tile_y = int((hero_pos_y) // metadata_layer.tileheight)
 
         # find the tiles around the hero and extract their rects for collision
         tile_rects = []
         for diry in (-1, 0 , 1):
             for dirx in (-1, 0, 1):
-                this_sprite = coll_layer.content2D[tile_y + diry][tile_x + dirx]
+                this_sprite = metadata_layer.content2D[tile_y + diry][tile_x + dirx]
                 if this_sprite is not None:
                     this_tiles = [self.map.tiles.get(k, None) for k in this_sprite.key if k in self.map.tiles]
                     if this_tiles and this_tiles[0].properties.get('Block', None) in ['true']:

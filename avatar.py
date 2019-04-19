@@ -111,7 +111,9 @@ class Avatar(tiledtmxloader.helperspygame.SpriteLayer.Sprite):
             h_avg = metadata_layer.tileheight * tile_avg_height
             h_dx = metadata_layer.tileheight * tile_x_slope
             h_dy = metadata_layer.tileheight * tile_y_slope
-            self.z = h_avg
+            self.z = h_avg + \
+                h_dx * (pos_x - tile_x * metadata_layer.tilewidth) / metadata_layer.tilewidth + \
+                h_dy * (pos_y - tile_y * metadata_layer.tileheight) / metadata_layer.tileheight;
         else:
             self.z = 0
 
