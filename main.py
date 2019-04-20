@@ -64,10 +64,7 @@ def demo_pygame(file_name):
     world.renderer.set_camera_position_and_size(cam_world_pos_x_px, cam_world_pos_y_px, screen_width_px, screen_height_px)
 
     # add the hero the the right layer, it can be changed using 0-9 keys
-    world.avatar_layers[hero.layer][1].add_sprite(hero)
-
-    # layer add/remove hero keys
-    num_keys = [pygame.K_0, pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5, pygame.K_6, pygame.K_7, pygame.K_8, pygame.K_9]
+    hero.add_to_sprite_layer(world.avatar_layers[hero.layer][1])
 
     # variables for the main loop
     clock = pygame.time.Clock()
@@ -88,19 +85,6 @@ def demo_pygame(file_name):
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     running = False
-                elif event.key in num_keys:
-                    # find out which layer to manipulate
-                    idx = num_keys.index(event.key)
-                    # make sure this layer exists
-                    if idx < len(world.map.layers):
-                        if world.all_sprite_layers[idx].contains_sprite(hero):
-                            world.all_sprite_layers[idx].remove_sprite(hero)
-                            print("removed hero sprite from layer", idx)
-                        else:
-                            world.all_sprite_layers[idx].add_sprite(hero)
-                            print("added hero sprite to layer", idx)
-                    else:
-                        print("no such layer or more than 10 layers: " + str(idx))
 
         # find directions
         direction_x = pygame.key.get_pressed()[pygame.K_RIGHT] - pygame.key.get_pressed()[pygame.K_LEFT]
@@ -117,10 +101,9 @@ def demo_pygame(file_name):
         step_y_px = speed_y * dt * direction_y / dir_len
         hero.try_to_move(world, dt, step_x_px, step_y_px)
 
-        # adjust camera according to the hero's position, follow him
-        # (don't make the hero follow the cam, maybe later you want different
-        #  objects to be followd by the cam)
-        world.renderer.set_camera_position(hero.rect.centerx, hero.rect.centery)
+        # adjust camera according to the hero's position
+        world.set_camera_layer_level(hero.layer)
+        world.set_camera_position(hero.rect.centerx, hero.rect.centery, hero.z)
 
         # clear screen, might be left out if every pixel is redrawn anyway
         screen.fill((0, 0, 0))

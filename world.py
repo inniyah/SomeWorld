@@ -30,6 +30,8 @@ class World():
         self.map = map
         self.avatars = set()
         self.avatars_dict = {}
+        self.camera_layer_level = None
+        self.show_layer_level_up = False
 
         # load the images using pygame
         self.resources = tiledtmxloader.helperspygame.ResourceLoaderPygame()
@@ -73,6 +75,35 @@ class World():
 
         print("Avatar Layers: {}".format(self.avatar_layers))
         print("Metadata Layers: {}".format(self.metadata_layers))
+
+    def adjust_layer_level_visibility(self):
+        show_layer_level = self.camera_layer_level
+        if self.show_layer_level_up:
+            show_layer_level += 1
+        for idx, layer in enumerate(self.resources.world_map.layers):
+            if not layer.is_object_group:
+                layer_level = int(layer.properties.get('Level', 0))
+                is_metadata = layer.properties.get('Metadata', None)
+                sprite_layer = self.all_sprite_layers[idx]
+                if layer_level <= show_layer_level and not is_metadata:
+                    sprite_layer.visible = True
+                else:
+                    sprite_layer.visible = False
+
+    def set_camera_layer_level(self, new_layer_level):
+        if new_layer_level == self.camera_layer_level:
+            return
+        self.camera_layer_level = new_layer_level
+        self.adjust_layer_level_visibility()
+
+    def set_camera_position(self, pos_x, pos_y, pos_z):
+        self.renderer.set_camera_position(pos_x, pos_y)
+        if not self.show_layer_level_up and pos_z >= 1.5:
+            self.show_layer_level_up = True
+            self.adjust_layer_level_visibility()
+        elif self.show_layer_level_up and pos_z < 1.0:
+            self.show_layer_level_up = False
+            self.adjust_layer_level_visibility()
 
     def get_pos_info(self, pos_x, pos_y, metadata_layer):
         tile_x = int(pos_x // metadata_layer.tilewidth)

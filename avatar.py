@@ -72,6 +72,8 @@ class Avatar(tiledtmxloader.helperspygame.SpriteLayer.Sprite):
         rect = image.get_rect()
         rect.midbottom = (start_pos_x, start_pos_y)
 
+        self.sprite_layers = set()
+
         super().__init__(image, rect)
 
     def execute_move(self, world, delta_time, step_x, step_y):
@@ -146,6 +148,26 @@ class Avatar(tiledtmxloader.helperspygame.SpriteLayer.Sprite):
             tile_y_slope = 0.0
         return pos_x, pos_y, tile_x, tile_y, tile_avg_height, tile_x_slope, tile_y_slope, sprite, tiles
 
+    def add_to_sprite_layer(self, sprite_layer):
+       if sprite_layer not in self.sprite_layers:
+            sprite_layer.add_sprite(self)
+            #print("added avatar sprite to sprite layer", sprite_layer)
+            self.sprite_layers.add(sprite_layer)
+
+    def remove_from_sprite_layer(self, world, sprite_layer):
+       if sprite_layer in self.sprite_layers:
+            if sprite_layer.contains_sprite(self):
+                sprite_layer.remove_sprite(hero)
+                #print("removed avatar sprite from sprite layer", sprite_layer)
+            self.sprite_layers.pop(sprite_layer, None)
+
+    def remove_from_all_sprite_layers(self):
+       for sprite_layer in sprite_layer:
+            if sprite_layer.contains_sprite(self):
+                sprite_layer.remove_sprite(hero)
+                #print("removed avatar sprite from sprite layer", sprite_layer)
+            self.sprite_layers.pop(sprite_layer, None)
+
 class Hero(Avatar):
     def __init__(self, start_pos_x, start_pos_y, spritesheet_png):
         super().__init__(start_pos_x, start_pos_y, spritesheet_png)
@@ -164,4 +186,4 @@ def create_avatar(world, layer_id, start_pos_x, start_pos_y, obj_id, obj_props):
     full_spritesheet_path = os.path.join(os.path.dirname(__file__), 'data', 'avatars', spritesheet_png)
     avatar = Avatar(start_pos_x, start_pos_y, full_spritesheet_path, obj_id)
     world.add_avatar(avatar)
-    world.avatar_layers[layer_id][1].add_sprite(avatar)
+    avatar.add_to_sprite_layer(world.avatar_layers[layer_id][1])
