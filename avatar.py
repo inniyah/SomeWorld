@@ -96,6 +96,20 @@ class Avatar(tiledtmxloader.helperspygame.SpriteLayer.Sprite):
                 print("Removed avatar sprite '{}' to sprite layer '{}'".format(self.id, sprite_layer.name))
         self.sprite_layers.clear()
 
+    def adjust_position(self, world):
+        metadata_layer = world.metadata_layers[self.layer][1]
+        pos_x, pos_y, tile_x, tile_y, tile_avg_height, tile_x_slope, tile_y_slope, sprite, tiles = self.get_map_pos_height_info(world, metadata_layer)
+        if not tile_avg_height is None:
+            h_avg = metadata_layer.tileheight * tile_avg_height
+            h_dx = metadata_layer.tileheight * tile_x_slope
+            h_dy = metadata_layer.tileheight * tile_y_slope
+            rel_x = (pos_x - tile_x * metadata_layer.tilewidth) / metadata_layer.tilewidth - 0.5
+            rel_y = (pos_y - tile_y * metadata_layer.tileheight) / metadata_layer.tileheight - 0.5
+            self.z = h_avg + h_dx * rel_x + h_dy * rel_y;
+            #print("Avatar sprite '{}'; z={} ({} + {} * {} + {} * {})".format(self.id, self.z, h_avg, h_dx, rel_x, h_dy, rel_y))
+        else:
+            self.z = 0
+
     def execute_move(self, world, delta_time, step_x, step_y):
         self.distance += math.sqrt(step_x**2 + step_y**2)
         self.move_id = int(self.distance / 10.) % NUM_MOVES
@@ -126,18 +140,18 @@ class Avatar(tiledtmxloader.helperspygame.SpriteLayer.Sprite):
         self.rect.midbottom = (self.pos_x, self.pos_y)
 
         self.dir_id = dir_id
+        self.adjust_position(world)
 
-        metadata_layer = world.metadata_layers[self.layer][1]
-        pos_x, pos_y, tile_x, tile_y, tile_avg_height, tile_x_slope, tile_y_slope, sprite, tiles = self.get_map_pos_height_info(world, metadata_layer)
-        if not tile_avg_height is None:
-            h_avg = metadata_layer.tileheight * tile_avg_height
-            h_dx = metadata_layer.tileheight * tile_x_slope
-            h_dy = metadata_layer.tileheight * tile_y_slope
-            self.z = h_avg + \
-                h_dx * (pos_x - tile_x * metadata_layer.tilewidth) / metadata_layer.tilewidth + \
-                h_dy * (pos_y - tile_y * metadata_layer.tileheight) / metadata_layer.tileheight;
-        else:
-            self.z = 0
+        if self.z >= world.VPIXELS_PER_LAYER:
+            print("Avatar sprite '{}' going up (z={})".format(self.id, self.z))
+            self.move_to_layer_level(world, self.layer + 1)
+            self.pos_y -= world.VPIXELS_PER_LAYER
+            self.adjust_position(world)
+        elif self.z < 0:
+            print("Avatar sprite '{}' going down (z={})".format(self.id, self.z))
+            self.move_to_layer_level(world, self.layer - 1)
+            self.pos_y += world.VPIXELS_PER_LAYER
+            self.adjust_position(world)
 
     def move_to_layer_level(self, world, new_layer_level):
         self.remove_from_all_sprite_layers()
@@ -150,9 +164,6 @@ class Avatar(tiledtmxloader.helperspygame.SpriteLayer.Sprite):
         collision_height = self.COLLISION_HEIGHT
         new_step_x, new_step_y = world.check_collision(self.pos_x, self.pos_y, step_x, step_y, collision_width, collision_height, world.metadata_layers[self.layer][1])
         self.execute_move(world, delta_time, new_step_x, new_step_y)
-        if self.z >= world.VPIXELS_PER_LAYER:
-            self.move_to_layer_level(world, self.layer + 1)
-            self.z = 0
 
     def get_map_pos(self):
         return (self.pos_x, self.pos_y - self.COLLISION_HEIGHT/2.0)
