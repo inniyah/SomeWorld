@@ -76,6 +76,26 @@ class Avatar(tiledtmxloader.helperspygame.SpriteLayer.Sprite):
 
         super().__init__(image, rect)
 
+    def add_to_sprite_layer(self, sprite_layer):
+        if sprite_layer not in self.sprite_layers:
+            sprite_layer.add_sprite(self)
+            print("Added avatar sprite '{}' to sprite layer '{}'".format(self.id, sprite_layer.name))
+            self.sprite_layers.add(sprite_layer)
+
+    def remove_from_sprite_layer(self, world, sprite_layer):
+        if sprite_layer in self.sprite_layers:
+            if sprite_layer.contains_sprite(self):
+                sprite_layer.remove_sprite(self)
+                print("Removed avatar sprite '{}' to sprite layer '{}'".format(self.id, sprite_layer.name))
+            self.sprite_layers.discard(sprite_layer)
+
+    def remove_from_all_sprite_layers(self):
+        for sprite_layer in self.sprite_layers:
+            if sprite_layer.contains_sprite(self):
+                sprite_layer.remove_sprite(self)
+                print("Removed avatar sprite '{}' to sprite layer '{}'".format(self.id, sprite_layer.name))
+        self.sprite_layers.clear()
+
     def execute_move(self, world, delta_time, step_x, step_y):
         self.distance += math.sqrt(step_x**2 + step_y**2)
         self.move_id = int(self.distance / 10.) % NUM_MOVES
@@ -119,11 +139,20 @@ class Avatar(tiledtmxloader.helperspygame.SpriteLayer.Sprite):
         else:
             self.z = 0
 
+    def move_to_layer_level(self, world, new_layer_level):
+        self.remove_from_all_sprite_layers()
+        self.layer = new_layer_level
+        sprite_layer = world.avatar_layers[self.layer][1]
+        self.add_to_sprite_layer(sprite_layer)
+
     def try_to_move(self, world, delta_time, step_x, step_y):
         collision_width = self.rect.width
         collision_height = self.COLLISION_HEIGHT
         new_step_x, new_step_y = world.check_collision(self.pos_x, self.pos_y, step_x, step_y, collision_width, collision_height, world.metadata_layers[self.layer][1])
         self.execute_move(world, delta_time, new_step_x, new_step_y)
+        if self.z >= world.VPIXELS_PER_LAYER:
+            self.move_to_layer_level(world, self.layer + 1)
+            self.z = 0
 
     def get_map_pos(self):
         return (self.pos_x, self.pos_y - self.COLLISION_HEIGHT/2.0)
@@ -147,26 +176,6 @@ class Avatar(tiledtmxloader.helperspygame.SpriteLayer.Sprite):
             tile_x_slope = 0.0
             tile_y_slope = 0.0
         return pos_x, pos_y, tile_x, tile_y, tile_avg_height, tile_x_slope, tile_y_slope, sprite, tiles
-
-    def add_to_sprite_layer(self, sprite_layer):
-       if sprite_layer not in self.sprite_layers:
-            sprite_layer.add_sprite(self)
-            #print("added avatar sprite to sprite layer", sprite_layer)
-            self.sprite_layers.add(sprite_layer)
-
-    def remove_from_sprite_layer(self, world, sprite_layer):
-       if sprite_layer in self.sprite_layers:
-            if sprite_layer.contains_sprite(self):
-                sprite_layer.remove_sprite(hero)
-                #print("removed avatar sprite from sprite layer", sprite_layer)
-            self.sprite_layers.pop(sprite_layer, None)
-
-    def remove_from_all_sprite_layers(self):
-       for sprite_layer in sprite_layer:
-            if sprite_layer.contains_sprite(self):
-                sprite_layer.remove_sprite(hero)
-                #print("removed avatar sprite from sprite layer", sprite_layer)
-            self.sprite_layers.pop(sprite_layer, None)
 
 class Hero(Avatar):
     def __init__(self, start_pos_x, start_pos_y, spritesheet_png):

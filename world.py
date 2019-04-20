@@ -25,6 +25,7 @@ class World():
     HPIXELS_PER_METER = 32.0
     VPIXELS_PER_METER = 23.0 # 45 degrees, so 32 * sqrt(2) / 2
     METERS_PER_LAYER = 2.0
+    VPIXELS_PER_LAYER = 46.0 # METERS_PER_LAYER * VPIXELS_PER_METER
 
     def __init__(self, map):
         self.map = map
