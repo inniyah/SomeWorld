@@ -98,10 +98,10 @@ class World():
 
     def set_camera_position(self, pos_x, pos_y, pos_z):
         self.renderer.set_camera_position(pos_x, pos_y)
-        if not self.show_layer_level_up and pos_z >= 1.5:
+        if not self.show_layer_level_up and pos_z >= 1.5 * self.VPIXELS_PER_METER:
             self.show_layer_level_up = True
             self.adjust_layer_level_visibility()
-        elif self.show_layer_level_up and pos_z < 1.0:
+        elif self.show_layer_level_up and pos_z < 1.0 * self.VPIXELS_PER_METER:
             self.show_layer_level_up = False
             self.adjust_layer_level_visibility()
 
