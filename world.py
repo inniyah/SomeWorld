@@ -21,6 +21,24 @@ def special_round(value):
         return math.floor(value)
     return math.ceil(value)
 
+class WorldLayer():
+    def __init__(self, level):
+        self.level = level
+        self.all_layers_info = []
+        self.avatar_layer = None
+        self.metadata_layer = None
+
+    def add_layer(self, idx, layer, sprite_layer):
+        if int(layer.properties.get('Level', 0)) != self.level:
+            return
+        layer_info = (layer, sprite_layer, idx)
+        self.all_layers_info.append(layer_info)
+        if layer.properties.get('Metadata', None):
+            self.metadata_layer = layer_info
+        if layer.properties.get('Avatar', None):
+            self.avatar_layer = layer_info
+
+
 class World():
     HPIXELS_PER_METER = 32.0
     VPIXELS_PER_METER = 23.0 # 45 degrees, so 32 * sqrt(2) / 2
@@ -47,18 +65,17 @@ class World():
         # renderer
         self.renderer = tiledtmxloader.helperspygame.RendererPygame()
 
-        self.avatar_layers = {}
-        self.metadata_layers = {}
-
+        self.world_layers = {}
         self.all_sprite_layers = []
+
         for idx, layer in enumerate(self.resources.world_map.layers):
+            layer_level = int(layer.properties.get('Level', 0))
             if layer.is_object_group:
                 print("Objects Layer '{}' ({}): {}".format(layer.name, 'visible' if layer.visible else 'not visible', layer.properties))
                 #json.dump(layer, sys.stdout, cls=JSONDebugEncoder, indent=2, sort_keys=True)
                 for obj in layer.objects:
                     obj_id = obj.properties.get('Id', None)
                     obj_type = obj.properties.get('Type', None)
-                    layer_level = int(layer.properties.get('Level', 0))
                     if obj_type == 'avatar':
                         print("Avatar '{}' ('{}') at x={}, y={}".format(obj_id, obj_type, obj.x, obj.y))
                         create_avatar(self, layer_level, obj.x, obj.y, obj_id, obj.properties)
@@ -66,16 +83,17 @@ class World():
                         print("Object '{}' ('{}') at x={}, y={}".format(obj_id, obj_type, obj.x, obj.y))
             else:
                 print("Tiled Layer '{}' ({}): {}".format(layer.name, 'visible' if layer.visible else 'not visible', layer.properties))
+                if layer_level not in self.world_layers:
+                    self.world_layers[layer_level] = WorldLayer(layer_level)
                 sprite_layer = tiledtmxloader.helperspygame.get_layer_at_index(idx, self.resources)
+                self.world_layers[layer_level].add_layer(idx, layer, sprite_layer)
                 self.all_sprite_layers.append(sprite_layer)
 
-                if layer.properties.get('Metadata', None):
-                    self.metadata_layers[int(layer.properties.get('Level', 0))] = (layer, sprite_layer)
-                if layer.properties.get('Avatar', None):
-                    self.avatar_layers[int(layer.properties.get('Level', 0))] = (layer, sprite_layer)
+    def get_avatar_layer(self, layer_level):
+        return self.world_layers[layer_level].avatar_layer
 
-        print("Avatar Layers: {}".format(self.avatar_layers))
-        print("Metadata Layers: {}".format(self.metadata_layers))
+    def get_metadata_layer(self, layer_level):
+        return self.world_layers[layer_level].metadata_layer
 
     def adjust_layer_level_visibility(self):
         show_layer_level = self.camera_layer_level
@@ -193,11 +211,11 @@ class World():
         color_black = (0,0,0)
 
         for avatar in self.avatars:
-            avatar_layer = self.avatar_layers[avatar.layer][1]
+            avatar_layer = self.get_avatar_layer(avatar.layer)[1]
 
             #pos_x, pos_y = avatar.get_map_pos()
 
-            metadata_layer = self.metadata_layers[avatar.layer][1]
+            metadata_layer = self.get_metadata_layer(avatar.layer)[1]
             #pos_x, pos_y, tile_x, tile_y, sprite, tiles = avatar.get_map_pos_info(self, metadata_layer)
             pos_x, pos_y, tile_x, tile_y, tile_avg_height, tile_x_slope, tile_y_slope, sprite, tiles = avatar.get_map_pos_height_info(self, metadata_layer)
 
