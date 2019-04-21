@@ -5,6 +5,7 @@ import tiledtmxloader
 import sys
 import os
 import math
+import array
 import glob
 import re
 import pygame
@@ -19,11 +20,68 @@ class WorldLayerInfo():
         self.sprite_layer = sprite_layer
 
 class WorldLevel():
-    def __init__(self, level):
+    def __init__(self, level, tiles):
         self.level = level
+        self.tiles = tiles
         self.all_layers_info = []
         self.avatar_layer = None
         self.metadata_layer = None
+        self.obstacles = None
+
+    # Type code  C Type          Python Type        Minimum size in bytes
+    # 'c'        char            character          1
+    # 'b'        signed char     int                1
+    # 'B'        unsigned char   int                1
+    # 'u'        Py_UNICODE      Unicode character  2 on narrow unicode builds, 4 on wide builds
+    # 'h'        signed short    int                2
+    # 'H'        unsigned short  int                2
+    # 'i'        signed int      int                2
+    # 'I'        unsigned int    long               2
+    # 'l'        signed long     int                4
+    # 'L'        unsigned long   long               4
+    # 'f'        float           float              4
+    # 'd'        double          float              8
+
+    CELL_BLOCK_NW = 1<<0
+    CELL_BLOCK_N  = 1<<1
+    CELL_BLOCK_NE = 1<<2
+    CELL_BLOCK_W  = 1<<3
+    CELL_BLOCK    = 1<<4
+    CELL_BLOCK_E  = 1<<5
+    CELL_BLOCK_SW = 1<<6
+    CELL_BLOCK_S  = 1<<7
+    CELL_BLOCK_SE = 1<<8
+
+    def fill_obstacles(self):
+        print("fill_obstacles: start")
+        self.obstacles = array.array('H', [0]) * (self.metadata_layer.layer.width * self.metadata_layer.layer.height)
+
+        for tile_y in range(0, self.metadata_layer.layer.height):
+            for tile_x in range(0, self.metadata_layer.layer.width):
+                tile_mask = 0
+                for dirx, diry, dirmask in [
+                    (-1, -1, 1<<0),
+                    ( 0, -1, 1<<1),
+                    ( 1, -1, 1<<2),
+                    (-1,  0, 1<<3),
+                    ( 0,  0, 1<<4),
+                    ( 1,  0, 1<<5),
+                    (-1,  1, 1<<6),
+                    ( 0,  1, 1<<7),
+                    ( 1,  1, 1<<8),
+                ]:
+                    if tile_y + diry >= 0 and tile_x + dirx >= 0 and \
+                        tile_y + diry < self.metadata_layer.layer.height and \
+                        tile_x + dirx < self.metadata_layer.layer.width:
+                            this_sprite = self.metadata_layer.sprite_layer.content2D[tile_y + diry][tile_x + dirx]
+                    else:
+                            this_sprite = None
+
+                    if this_sprite is not None:
+                        this_tiles = [self.tiles.get(k, None) for k in this_sprite.key if k in self.tiles]
+                        if this_tiles and this_tiles[0].properties.get('Block', None) in ['true']:
+                            tile_mask |= dirmask
+        print("fill_obstacles: end")
 
     def add_layer(self, idx, layer, sprite_layer):
         if int(layer.properties.get('Level', 0)) != self.level:
@@ -32,9 +90,9 @@ class WorldLevel():
         self.all_layers_info.append(layer_info)
         if layer.properties.get('Metadata', None):
             self.metadata_layer = layer_info
+            self.fill_obstacles()
         if layer.properties.get('Avatar', None):
             self.avatar_layer = layer_info
-
 
 class World():
     HPIXELS_PER_METER = 32.0
@@ -79,9 +137,10 @@ class World():
                     else:
                         print("Object '{}' ('{}') at x={}, y={}".format(obj_id, obj_type, obj.x, obj.y))
             else:
-                print("Tiled Layer '{}' ({}): {}".format(layer.name, 'visible' if layer.visible else 'not visible', layer.properties))
+                print("Tiled Layer '{}' ({}): {} ({}x{})".format(layer.name, 'visible' if layer.visible else 'not visible',
+                    layer.properties, layer.width, layer.height))
                 if layer_level not in self.world_layers:
-                    self.world_layers[layer_level] = WorldLevel(layer_level)
+                    self.world_layers[layer_level] = WorldLevel(layer_level, self.map.tiles)
                 sprite_layer = tiledtmxloader.helperspygame.get_layer_at_index(idx, self.resources)
                 self.world_layers[layer_level].add_layer(idx, layer, sprite_layer)
                 self.all_sprite_layers.append(sprite_layer)
