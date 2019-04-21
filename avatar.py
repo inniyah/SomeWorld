@@ -97,7 +97,7 @@ class Avatar(tiledtmxloader.helperspygame.SpriteLayer.Sprite):
         self.sprite_layers.clear()
 
     def adjust_position(self, world):
-        metadata_layer = world.get_metadata_layer(self.layer)[1]
+        metadata_layer = world.get_metadata_layer(self.layer).sprite_layer
         pos_x, pos_y, tile_x, tile_y, tile_avg_height, tile_x_slope, tile_y_slope, sprite, tiles = self.get_map_pos_height_info(world, metadata_layer)
         if not tile_avg_height is None:
             h_avg = metadata_layer.tileheight * tile_avg_height
@@ -156,13 +156,13 @@ class Avatar(tiledtmxloader.helperspygame.SpriteLayer.Sprite):
     def move_to_layer_level(self, world, new_layer_level):
         self.remove_from_all_sprite_layers()
         self.layer = new_layer_level
-        sprite_layer = world.get_avatar_layer(self.layer)[1]
+        sprite_layer = world.get_avatar_layer(self.layer).sprite_layer
         self.add_to_sprite_layer(sprite_layer)
 
     def try_to_move(self, world, delta_time, step_x, step_y):
         collision_width = self.rect.width
         collision_height = self.COLLISION_HEIGHT
-        new_step_x, new_step_y = world.check_collision(self.pos_x, self.pos_y, step_x, step_y, collision_width, collision_height, world.get_metadata_layer(self.layer)[1])
+        new_step_x, new_step_y = world.check_collision(self.pos_x, self.pos_y, step_x, step_y, collision_width, collision_height, world.get_metadata_layer(self.layer).sprite_layer)
         self.execute_move(world, delta_time, new_step_x, new_step_y)
 
     def get_map_pos(self):
@@ -206,4 +206,4 @@ def create_avatar(world, layer_id, start_pos_x, start_pos_y, obj_id, obj_props):
     full_spritesheet_path = os.path.join(os.path.dirname(__file__), 'data', 'avatars', spritesheet_png)
     avatar = Avatar(start_pos_x, start_pos_y, full_spritesheet_path, obj_id)
     world.add_avatar(avatar)
-    avatar.add_to_sprite_layer(world.get_avatar_layer(layer_id)[1])
+    avatar.add_to_sprite_layer(world.get_avatar_layer(layer_id).sprite_layer)

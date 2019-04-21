@@ -21,7 +21,13 @@ def special_round(value):
         return math.floor(value)
     return math.ceil(value)
 
-class WorldLayer():
+class WorldLayerInfo():
+    def __init__(self, idx, layer, sprite_layer):
+        self.idx = idx
+        self.layer = layer
+        self.sprite_layer = sprite_layer
+
+class WorldLevel():
     def __init__(self, level):
         self.level = level
         self.all_layers_info = []
@@ -31,7 +37,7 @@ class WorldLayer():
     def add_layer(self, idx, layer, sprite_layer):
         if int(layer.properties.get('Level', 0)) != self.level:
             return
-        layer_info = (layer, sprite_layer, idx)
+        layer_info = WorldLayerInfo(idx, layer, sprite_layer)
         self.all_layers_info.append(layer_info)
         if layer.properties.get('Metadata', None):
             self.metadata_layer = layer_info
@@ -84,7 +90,7 @@ class World():
             else:
                 print("Tiled Layer '{}' ({}): {}".format(layer.name, 'visible' if layer.visible else 'not visible', layer.properties))
                 if layer_level not in self.world_layers:
-                    self.world_layers[layer_level] = WorldLayer(layer_level)
+                    self.world_layers[layer_level] = WorldLevel(layer_level)
                 sprite_layer = tiledtmxloader.helperspygame.get_layer_at_index(idx, self.resources)
                 self.world_layers[layer_level].add_layer(idx, layer, sprite_layer)
                 self.all_sprite_layers.append(sprite_layer)
@@ -211,29 +217,28 @@ class World():
         color_black = (0,0,0)
 
         for avatar in self.avatars:
-            avatar_layer = self.get_avatar_layer(avatar.layer)[1]
+            avatar_sprite_layer = self.get_avatar_layer(avatar.layer).sprite_layer
+            metadata_sprite_layer = self.get_metadata_layer(avatar.layer).sprite_layer
 
             #pos_x, pos_y = avatar.get_map_pos()
+            #pos_x, pos_y, tile_x, tile_y, sprite, tiles = avatar.get_map_pos_info(self, metadata_sprite_layer)
+            pos_x, pos_y, tile_x, tile_y, tile_avg_height, tile_x_slope, tile_y_slope, sprite, tiles = avatar.get_map_pos_height_info(self, metadata_sprite_layer)
 
-            metadata_layer = self.get_metadata_layer(avatar.layer)[1]
-            #pos_x, pos_y, tile_x, tile_y, sprite, tiles = avatar.get_map_pos_info(self, metadata_layer)
-            pos_x, pos_y, tile_x, tile_y, tile_avg_height, tile_x_slope, tile_y_slope, sprite, tiles = avatar.get_map_pos_height_info(self, metadata_layer)
-
-            mx = (pos_x // avatar_layer.tilewidth) * metadata_layer.tilewidth
-            my = (pos_y // avatar_layer.tileheight) * metadata_layer.tileheight
-            mx, my = self.renderer.world_to_screen(avatar_layer, mx, my)
-            pygame.draw.rect(screen, color_blue, [mx, my,  metadata_layer.tilewidth, metadata_layer.tileheight], 2)
+            mx = (pos_x // metadata_sprite_layer.tilewidth) * metadata_sprite_layer.tilewidth
+            my = (pos_y // metadata_sprite_layer.tileheight) * metadata_sprite_layer.tileheight
+            mx, my = self.renderer.world_to_screen(avatar_sprite_layer, mx, my)
+            pygame.draw.rect(screen, color_blue, [mx, my,  metadata_sprite_layer.tilewidth, metadata_sprite_layer.tileheight], 2)
 
             if not tile_avg_height is None:
-                h_avg = metadata_layer.tileheight * tile_avg_height
-                h_dx = (metadata_layer.tileheight * tile_x_slope) / 2.0
-                h_dy = (metadata_layer.tileheight * tile_y_slope) / 2.0
+                h_avg = metadata_sprite_layer.tileheight * tile_avg_height
+                h_dx = (metadata_sprite_layer.tileheight * tile_x_slope) / 2.0
+                h_dy = (metadata_sprite_layer.tileheight * tile_y_slope) / 2.0
                 pygame.draw.lines(screen, color_blue, True, [
-                    (mx,                          my                            - (h_avg - h_dx - h_dy)),
-                    (mx + avatar_layer.tilewidth, my                            - (h_avg + h_dx - h_dy)),
-                    (mx + avatar_layer.tilewidth, my + avatar_layer.tileheight  - (h_avg + h_dx + h_dy)),
-                    (mx,                          my + avatar_layer.tileheight  - (h_avg - h_dx + h_dy))
+                    (mx,                                   my                                     - (h_avg - h_dx - h_dy)),
+                    (mx + metadata_sprite_layer.tilewidth, my                                     - (h_avg + h_dx - h_dy)),
+                    (mx + metadata_sprite_layer.tilewidth, my + metadata_sprite_layer.tileheight  - (h_avg + h_dx + h_dy)),
+                    (mx,                                   my + metadata_sprite_layer.tileheight  - (h_avg - h_dx + h_dy))
                 ], 2)
 
-            px, py = self.renderer.world_to_screen(avatar_layer, avatar.rect.x, avatar.rect.y)
+            px, py = self.renderer.world_to_screen(avatar_sprite_layer, avatar.rect.x, avatar.rect.y)
             pygame.draw.rect(screen, color_red, [px, py, avatar.rect.width, avatar.rect.height], 2)

@@ -64,7 +64,7 @@ def demo_pygame(file_name):
     world.renderer.set_camera_position_and_size(cam_world_pos_x_px, cam_world_pos_y_px, screen_width_px, screen_height_px)
 
     # add the hero the the right layer, it can be changed using 0-9 keys
-    hero.add_to_sprite_layer(world.get_avatar_layer(hero.layer)[1])
+    hero.add_to_sprite_layer(world.get_avatar_layer(hero.layer).sprite_layer)
 
     # variables for the main loop
     clock = pygame.time.Clock()
