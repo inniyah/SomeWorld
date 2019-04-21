@@ -4,6 +4,7 @@
 import os
 import sys
 import json
+import math
 import tiledtmxloader
 
 # This class escapes a string, by replacing control characters by their hexadecimal equivalents
@@ -33,3 +34,12 @@ class JSONDebugEncoder(json.JSONEncoder):
         except:
             ret = ('%s' % (obj,))
         return ret
+
+def special_round(value):
+    """
+    For negative numbers it returns the value floored,
+    for positive numbers it returns the value ceiled.
+    """
+    if value < 0:
+        return math.floor(value)
+    return math.ceil(value)

@@ -73,6 +73,8 @@ class Avatar(tiledtmxloader.helperspygame.SpriteLayer.Sprite):
         rect.midbottom = (start_pos_x, start_pos_y)
 
         self.sprite_layers = set()
+        self.tile_x = None
+        self.tile_y = None
 
         super().__init__(image, rect)
 
@@ -153,16 +155,71 @@ class Avatar(tiledtmxloader.helperspygame.SpriteLayer.Sprite):
             self.pos_y += world.VPIXELS_PER_LAYER
             self.adjust_position(world)
 
+        metadata_sprite_layer = world.get_metadata_layer(self.layer).sprite_layer
+        self.tile_x = int((self.pos_x) // metadata_sprite_layer.tilewidth)
+        self.tile_y = int((self.pos_y) // metadata_sprite_layer.tileheight)
+
     def move_to_layer_level(self, world, new_layer_level):
         self.remove_from_all_sprite_layers()
         self.layer = new_layer_level
         sprite_layer = world.get_avatar_layer(self.layer).sprite_layer
         self.add_to_sprite_layer(sprite_layer)
 
+    def check_collision(self, world, hero_pos_x, hero_pos_y, step_x, step_y, metadata_sprite_layer):
+        """
+        Checks collision of the hero against the world. Its not the best way to
+        handle collision detection but for this demo it is good enough.
+
+        :Returns: steps to add to heros current position.
+        """
+        collision_width = self.rect.width
+        collision_height = self.COLLISION_HEIGHT
+
+        # create hero rect
+        hero_rect = pygame.Rect(0, 0, collision_width, collision_height)
+        hero_rect.midbottom = (hero_pos_x, hero_pos_y)
+
+        # find the tile location of the hero
+        tile_x = int((hero_pos_x) // metadata_sprite_layer.tilewidth)
+        tile_y = int((hero_pos_y) // metadata_sprite_layer.tileheight)
+
+        # find the tiles around the hero and extract their rects for collision
+        tile_rects = []
+        for diry in (-1, 0 , 1):
+            for dirx in (-1, 0, 1):
+                this_sprite = metadata_sprite_layer.content2D[tile_y + diry][tile_x + dirx]
+                if this_sprite is not None:
+                    this_tiles = [world.map.tiles.get(k, None) for k in this_sprite.key if k in world.map.tiles]
+                    if this_tiles and this_tiles[0].properties.get('Block', None) in ['true']:
+                        #json.dump(this_tile.properties, sys.stdout, cls=JSONDebugEncoder, indent=2, sort_keys=True)
+                        tile_rects.append(this_sprite.rect)
+
+        # save the original steps and return them if not canceled
+        res_step_x = step_x
+        res_step_y = step_y
+
+        # x direction, floor or ceil depending on the sign of the step
+        step_x = special_round(step_x)
+
+        # detect a collision and dont move in x direction if colliding
+        if hero_rect.move(step_x, 0).collidelist(tile_rects) > -1:
+            res_step_x = 0
+
+        # y direction, floor or ceil depending on the sign of the step
+        step_y = special_round(step_y)
+
+        # detect a collision and dont move in y direction if colliding
+        if hero_rect.move(0, step_y).collidelist(tile_rects) > -1:
+            res_step_y = 0
+
+        # return the step the hero should do
+        return res_step_x, res_step_y
+
     def try_to_move(self, world, delta_time, step_x, step_y):
         collision_width = self.rect.width
         collision_height = self.COLLISION_HEIGHT
-        new_step_x, new_step_y = world.check_collision(self.pos_x, self.pos_y, step_x, step_y, collision_width, collision_height, world.get_metadata_layer(self.layer).sprite_layer)
+        new_step_x, new_step_y = self.check_collision(
+            world, self.pos_x, self.pos_y, step_x, step_y, world.get_metadata_layer(self.layer).sprite_layer)
         self.execute_move(world, delta_time, new_step_x, new_step_y)
 
     def get_map_pos(self):
