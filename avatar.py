@@ -175,24 +175,27 @@ class Avatar(tiledtmxloader.helperspygame.SpriteLayer.Sprite):
         collision_width = self.rect.width
         collision_height = self.COLLISION_HEIGHT
 
-        # create hero rect
+        # create avatar rect
         hero_rect = pygame.Rect(0, 0, collision_width, collision_height)
         hero_rect.midbottom = (hero_pos_x, hero_pos_y)
 
-        # find the tile location of the hero
+        # find the tile location of the avatar
         tile_x = int((hero_pos_x) // metadata_sprite_layer.tilewidth)
         tile_y = int((hero_pos_y) // metadata_sprite_layer.tileheight)
 
-        # find the tiles around the hero and extract their rects for collision
+        # find the tiles around the avatar and extract their rects for collision
         tile_rects = []
-        for diry in (-1, 0 , 1):
-            for dirx in (-1, 0, 1):
-                this_sprite = metadata_sprite_layer.content2D[tile_y + diry][tile_x + dirx]
-                if this_sprite is not None:
-                    this_tiles = [world.map.tiles.get(k, None) for k in this_sprite.key if k in world.map.tiles]
-                    if this_tiles and this_tiles[0].properties.get('Block', None) in ['true']:
-                        #json.dump(this_tile.properties, sys.stdout, cls=JSONDebugEncoder, indent=2, sort_keys=True)
-                        tile_rects.append(this_sprite.rect)
+
+        for dirx, diry, mask in [
+            (-1, -1, 1<<0|1<<2), (0, -1, 1<<0), ( 1, -1, 1<<0|1<<3),
+            (-1,  0,      1<<2), (0,  0,   15), ( 1,  0,      1<<3),
+            (-1,  1, 1<<1|1<<2), (0,  1, 1<<1), ( 1,  1, 1<<1|1<<3)
+        ]:
+            this_sprite = metadata_sprite_layer.content2D[tile_y + diry][tile_x + dirx]
+            if this_sprite is not None:
+                this_tiles = [world.map.tiles.get(k, None) for k in this_sprite.key if k in world.map.tiles]
+                if this_tiles and (int(this_tiles[0].properties.get('BlockIn', 0)) & mask):
+                    tile_rects.append(this_sprite.rect)
 
         # save the original steps and return them if not canceled
         res_step_x = step_x
@@ -212,7 +215,7 @@ class Avatar(tiledtmxloader.helperspygame.SpriteLayer.Sprite):
         if hero_rect.move(0, step_y).collidelist(tile_rects) > -1:
             res_step_y = 0
 
-        # return the step the hero should do
+        # return the step the avatar should do
         return res_step_x, res_step_y
 
     def try_to_move(self, world, delta_time, step_x, step_y):
