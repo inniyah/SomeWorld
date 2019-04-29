@@ -3,13 +3,26 @@
 
 import os
 import sys
+import io
 import json
 import math
 import argparse
-import pyglet
+import hashlib
 import tiledtmxloader
+from PIL import Image
+
+from common import *
 
 THIS_DIR = os.path.dirname(os.path.realpath(__file__))
+
+def get_file_sha1sum(file_descriptor, blocksize=2**20):
+    sha1sum = hashlib.sha1()
+    while True:
+        fbuf = file_descriptor.read(blocksize)
+        if not fbuf:
+            break
+        sha1sum.update(fbuf)
+    return sha1sum.hexdigest()
 
 class MapResourceLoader(tiledtmxloader.tmxreader.AbstractResourceLoader):
     def load(self, tile_map):
@@ -40,49 +53,46 @@ class MapResourceLoader(tiledtmxloader.tmxreader.AbstractResourceLoader):
                         tex2.anchor_y = tex.anchor_y = orig_anchor_y
                         self.indexed_tiles[gid] = (offset_x, offset_y, tex2)
 
-    def _load_image(self, filename):
+        #json.dump(self.indexed_tiles, sys.stdout, cls=JSONDebugEncoder, indent=2, sort_keys=True)
+        for id, (offsetx, neg_offsety, img) in self.indexed_tiles.items():
+            print("~ Tile '{}' ({}, {}): {}".format(id, offsetx, neg_offsety, img))
+            sha1sum = hashlib.sha1()
+            output = io.BytesIO()
+            img.save(output, format='PNG')
+            sha1sum.update(output.getvalue())
+            print("~ SHA1: {}".format(sha1sum.hexdigest()))
+
+    def _load_image(self, filename, colorkey=None):
         img = self._img_cache.get(filename, None)
         if img is None:
-            directory_name = os.path.dirname(filename)
-            if directory_name not in pyglet.resource.path:
-                pyglet.resource.path.append(directory_name)
-                pyglet.resource.reindex()
-            img = pyglet.resource.image(os.path.basename(filename))
+            print("~ Image: '{}'".format(filename))
+            img = Image.open(filename)
             self._img_cache[filename] = img
         return img
 
-    def _load_image_file_like(self, file_like_obj):
-        img = self._img_cache.get(file_like_obj, None)
-        if img is None:
-            if file_like_obj is not None:
-                img = pyglet.image.load(filename, file_like_obj, pyglet.image.codecs.get_decoders("*.png")[0])
-            self._img_cache[filename] = img
-        return img
+    def _load_image_file_like(self, file_like_obj, colorkey=None):
+        return self._load_image(file_like_obj)
 
-    def _load_image_part(self, filename, x, y, w, h):
-        return self._load_image(filename).get_region(x, y, w, h)
+    def _load_image_part(self, filename, xpos, ypos, width, height, colorkey=None):
+        #print("~ Image Part: '{}' ({}, {}, {}, {}, {})".format(filename, xpos, ypos, width, height, colorkey))
+        source_img = self._load_image(filename, colorkey)
+        crop_rectangle = (xpos, ypos, xpos + width, ypos + height)
+        return self._load_image(filename).crop(crop_rectangle)
 
     def _load_image_parts(self, filename, margin, spacing, tile_width, tile_height, colorkey=None):
-        source_img = self._load_image(filename)
-
-        # Reverse the map column reading to compensate for pyglet's y-origin.
-        width = source_img.width
-        height = source_img.height
-
+        source_img = self._load_image(filename, colorkey)
+        width, height = source_img.size
         tile_width_spacing = tile_width + spacing
         width = (width // tile_width_spacing) * tile_width_spacing
-
         tile_height_spacing = tile_height + spacing
         height = (height // tile_height_spacing) * tile_height_spacing
-
-        # compensate that we start at the other y end to compensate for pyglets y direction
-        height_diff = source_img.height - height
         images = []
-        for y_pos in reversed(range(margin + height_diff, height, tile_height_spacing)):
+        for y_pos in range(margin, height, tile_height_spacing):
             for x_pos in range(margin, width, tile_width_spacing):
-                img_part = self._load_image_part(filename, x_pos, y_pos, tile_width, tile_height)
+                img_part = self._load_image_part(filename, x_pos, y_pos, tile_width, tile_height, colorkey)
                 images.append(img_part)
         return images
+
 
 def main():
     map_filename = os.path.join(THIS_DIR, 'data', 'maps', 'world.tmx')
