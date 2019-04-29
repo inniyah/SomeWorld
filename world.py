@@ -114,7 +114,7 @@ class World():
         self.adjust_layer_level_visibility()
 
     def set_camera_position(self, pos_x, pos_y, pos_z):
-        self.renderer.set_camera_position(pos_x, pos_y)
+        self.renderer.set_camera_position(pos_x, pos_y - pos_z)
         if not self.show_layer_level_up and pos_z >= 1.5 * self.VPIXELS_PER_METER:
             self.show_layer_level_up = True
             self.adjust_layer_level_visibility()
