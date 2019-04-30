@@ -54,13 +54,6 @@ class MapResourceLoader(tiledtmxloader.tmxreader.AbstractResourceLoader):
                         self.indexed_tiles[gid] = (offset_x, offset_y, tex2)
 
         #json.dump(self.indexed_tiles, sys.stdout, cls=JSONDebugEncoder, indent=2, sort_keys=True)
-        for id, (offsetx, neg_offsety, img) in self.indexed_tiles.items():
-            print("~ Tile '{}' ({}, {}): {}".format(id, offsetx, neg_offsety, img))
-            sha1sum = hashlib.sha1()
-            output = io.BytesIO()
-            img.save(output, format='PNG')
-            sha1sum.update(output.getvalue())
-            print("~ SHA1: {}".format(sha1sum.hexdigest()))
 
     def _load_image(self, filename, colorkey=None):
         img = self._img_cache.get(filename, None)
@@ -93,6 +86,22 @@ class MapResourceLoader(tiledtmxloader.tmxreader.AbstractResourceLoader):
                 images.append(img_part)
         return images
 
+    def get_indexed_tiles(self):
+        return self.indexed_tiles
+
+    def save_tile_images(self, directory):
+        os.makedirs(directory, exist_ok=True)
+        for id, (offsetx, neg_offsety, img) in self.indexed_tiles.items():
+            print("~ Tile '{}' ({}, {}): {}".format(id, offsetx, neg_offsety, img))
+            sha1sum = hashlib.sha1()
+            output = io.BytesIO()
+            img.save(output, format='PNG')
+            sha1sum.update(output.getvalue())
+            sha1sum = sha1sum.hexdigest()
+            print("~ SHA1: {}".format(sha1sum))
+            filename = os.path.join(directory, "tile_{}.png".format(sha1sum))
+            with open(filename, 'wb') as f:
+                f.write(output.getvalue())
 
 def main():
     map_filename = os.path.join(THIS_DIR, 'data', 'maps', 'world.tmx')
@@ -120,6 +129,8 @@ def main():
                 layer.properties, layer.width, layer.height))
             #sprite_layer = tiledtmxloader.helperspygame.get_layer_at_index(idx, resources)
             #all_sprite_layers.append(sprite_layer)
+
+    resources.save_tile_images(os.path.join(THIS_DIR, 'tmp'))
 
     return 0 # OK
 
