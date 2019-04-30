@@ -112,8 +112,20 @@ def main():
     assert map.orientation == "orthogonal"
     all_sprite_layers = []
 
+    map_tilewidth = map.tilewidth
+    map_tileheight = map.tileheight
+    map_num_tiles_x = map.width
+    map_num_tiles_y = map.height
+
     for idx, layer in enumerate(resources.world_map.layers):
+        layer_name = layer.name
+        layer_position_x = layer.x
+        layer_position_y = layer.y
+        layer_is_object_group = layer.is_object_group
+        layer_visible = layer.visible
+
         layer_level = int(layer.properties.get('Level', 0))
+
         if layer.is_object_group:
             print("Objects Layer '{}' ({}): {}".format(layer.name, 'visible' if layer.visible else 'not visible', layer.properties))
             #json.dump(layer, sys.stdout, cls=JSONDebugEncoder, indent=2, sort_keys=True)
@@ -127,10 +139,23 @@ def main():
         else:
             print("Tiled Layer '{}' ({}): {} ({}x{})".format(layer.name, 'visible' if layer.visible else 'not visible',
                 layer.properties, layer.width, layer.height))
+            layer_content = layer.decoded_content # array.array(height*width)
+
+            layer_sprites = []
+
+            bottom_margin = 0
+
+            content2D = [None] * map_num_tiles_y
+            for ypos in range(0, map_num_tiles_y):
+                content2D[ypos] = [None] * map_num_tiles_x
+                for xpos in range(0, map_num_tiles_x):
+                    #tile = map.tiles.get(k, None)
+                    content2D[ypos][xpos] = None
+
             #sprite_layer = tiledtmxloader.helperspygame.get_layer_at_index(idx, resources)
             #all_sprite_layers.append(sprite_layer)
 
-    resources.save_tile_images(os.path.join(THIS_DIR, 'tmp'))
+    #resources.save_tile_images(os.path.join(THIS_DIR, 'tmp'))
 
     return 0 # OK
 

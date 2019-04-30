@@ -5,6 +5,7 @@ import os
 import sys
 import json
 import math
+import array
 import tiledtmxloader
 
 # This class escapes a string, by replacing control characters by their hexadecimal equivalents
@@ -19,6 +20,8 @@ class JSONDebugEncoder(json.JSONEncoder):
             return sorted(obj)
         if isinstance(obj, bytes):
             return escape(obj.decode('utf-8'))
+        if isinstance(obj, array.array):
+            return "Array ({})".format(len(obj))
         if isinstance(obj, tiledtmxloader.tmxreader.Tile):
             return 'Tile: id={} gid={} images={} properties={}'.format(obj.id, obj.gid, obj.images, obj.properties)
         if isinstance(obj, object):
