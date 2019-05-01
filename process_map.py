@@ -104,7 +104,7 @@ class MapResourceLoader(tiledtmxloader.tmxreader.AbstractResourceLoader):
                 f.write(output.getvalue())
 
 def main():
-    map_filename = os.path.join(THIS_DIR, 'data', 'maps', 'world.tmx')
+    map_filename = os.path.join(THIS_DIR, 'data', 'maps', 'test.tmx')
     print("~ Map: '{}'".format(map_filename))
     map = tiledtmxloader.tmxreader.TileMapParser().parse_decode(map_filename)
     resources = MapResourceLoader()
@@ -122,7 +122,7 @@ def main():
         layer_position_x = layer.x
         layer_position_y = layer.y
         layer_is_object_group = layer.is_object_group
-        layer_visible = layer.visible
+        layer_is_visible = layer.visible
 
         layer_level = int(layer.properties.get('Level', 0))
 
@@ -137,8 +137,26 @@ def main():
                 else:
                     print("Object '{}' ('{}') at x={}, y={}".format(obj_id, obj_type, obj.x, obj.y))
         else:
-            print("Tiled Layer '{}' ({}): {} ({}x{})".format(layer.name, 'visible' if layer.visible else 'not visible',
-                layer.properties, layer.width, layer.height))
+            layer_is_metadata = layer.properties.get('Metadata', None)
+            layer_is_wall = layer.properties.get('Avatar', None)
+            layer_is_floor = not layer_is_metadata and not layer_is_wall
+
+            if layer_is_metadata:
+                layer_type = 'metadata'
+            elif layer_is_floor:
+                layer_type = 'floor'
+            elif layer_is_wall:
+                layer_type = 'wall'
+            else:
+                layer_type = 'unknown'
+
+            print("Tiled Layer '{}' ({}): {} ({}x{})".format(
+                layer_name,
+                layer_type,
+                layer.properties,
+                layer.width,
+                layer.height
+            ))
             layer_content = layer.decoded_content # array.array(height*width)
 
             layer_sprites = []
